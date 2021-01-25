@@ -1,0 +1,267 @@
+# This file is machine-generated - editing it directly is not advised
+
+[[Artifacts]]
+deps = ["Pkg"]
+git-tree-sha1 = "c30985d8821e0cd73870b17b0ed0ce6dc44cb744"
+uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+version = "1.3.0"
+
+[[Base64]]
+uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[CRlibm]]
+deps = ["Libdl"]
+git-tree-sha1 = "9d1c22cff9c04207f336b8e64840d0bd40d86e0e"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "0.8.0"
+
+[[CartesianMesh]]
+git-tree-sha1 = "dad6bda7c30f9936a902f63f315c161e574c6983"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/CartesianMesh.jl.git"
+uuid = "c3f3b8a2-2e3b-4b62-84bb-76319e98af94"
+version = "0.1.0"
+
+[[ChainRulesCore]]
+deps = ["Compat", "LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "53fed426c9af1eb68e63b3999e96454c2db79757"
+uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+version = "0.9.27"
+
+[[Compat]]
+deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
+git-tree-sha1 = "919c7f3151e79ff196add81d7f4e45d91bbf420b"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "3.25.0"
+
+[[CompilerSupportLibraries_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "8e695f735fca77e9708e795eda62afdb869cbb70"
+uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
+version = "0.3.4+0"
+
+[[DataStructures]]
+deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
+git-tree-sha1 = "4437b64df1e0adccc3e5d1adbc3ac741095e4677"
+uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+version = "0.18.9"
+
+[[Dates]]
+deps = ["Printf"]
+uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[DelimitedFiles]]
+deps = ["Mmap"]
+uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+
+[[Distances]]
+deps = ["LinearAlgebra", "Statistics"]
+git-tree-sha1 = "50e7640007e5cb752addec3876f43d909cae22bd"
+uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+version = "0.10.1"
+
+[[Distributed]]
+deps = ["Random", "Serialization", "Sockets"]
+uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+
+[[DynamicPolynomials]]
+deps = ["DataStructures", "Future", "LinearAlgebra", "MultivariatePolynomials", "MutableArithmetics", "Pkg", "Reexport", "Test"]
+git-tree-sha1 = "47442fd61e753190179778660601156472b5d1ec"
+uuid = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
+version = "0.3.15"
+
+[[ErrorfreeArithmetic]]
+git-tree-sha1 = "d6863c556f1142a061532e79f611aa46be201686"
+uuid = "90fa49ef-747e-5e6f-a989-263ba693cf1a"
+version = "0.5.2"
+
+[[FastGaussQuadrature]]
+deps = ["LinearAlgebra", "SpecialFunctions"]
+git-tree-sha1 = "6ea5f7b4aecce0e3a14ca1da03f62f86148c8fa3"
+uuid = "442a2c76-b920-505d-bb47-c5924d526838"
+version = "0.4.5"
+
+[[FastRounding]]
+deps = ["ErrorfreeArithmetic", "Test"]
+git-tree-sha1 = "224175e213fd4fe112db3eea05d66b308dc2bf6b"
+uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
+version = "0.2.0"
+
+[[Future]]
+deps = ["Random"]
+uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
+[[ImplicitDomainQuadrature]]
+deps = ["FastGaussQuadrature", "IntervalArithmetic", "LinearAlgebra", "PolynomialBasis", "Roots"]
+git-tree-sha1 = "81cc7e488f8cf23d7b4085f63f30037fa87d0c9f"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/ImplicitDomainQuadrature.git"
+uuid = "215a9a07-c97b-423e-a99e-05c6f7357eae"
+version = "0.1.0"
+
+[[InteractiveUtils]]
+deps = ["Markdown"]
+uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+
+[[IntervalArithmetic]]
+deps = ["CRlibm", "FastRounding", "LinearAlgebra", "Markdown", "Random", "RecipesBase", "RoundingEmulator", "SetRounding", "StaticArrays"]
+git-tree-sha1 = "c550c0477cd137e266f56c5a4daeaf953b7d3208"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.17.7"
+
+[[JLLWrappers]]
+git-tree-sha1 = "a431f5f2ca3f4feef3bd7a5e94b8b8d4f2f647a0"
+uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
+version = "1.2.0"
+
+[[LibGit2]]
+deps = ["Printf"]
+uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
+[[Libdl]]
+uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[LinearAlgebra]]
+deps = ["Libdl"]
+uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[[Logging]]
+uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[Markdown]]
+deps = ["Base64"]
+uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
+[[Mmap]]
+uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[MultivariatePolynomials]]
+deps = ["DataStructures", "LinearAlgebra", "MutableArithmetics"]
+git-tree-sha1 = "5ec0d7fe047640799418df4b1a4f7eae85bebfd8"
+uuid = "102ac46a-7ee4-5c85-9060-abc95bfdeaa3"
+version = "0.3.12"
+
+[[MutableArithmetics]]
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "6b6bb8f550dc38310afd4a0af0786dc3222459e2"
+uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+version = "0.2.14"
+
+[[NearestNeighbors]]
+deps = ["Distances", "StaticArrays"]
+git-tree-sha1 = "9afd724797039125e8e2cc362098f01dab60bc3a"
+uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+version = "0.4.8"
+
+[[OpenSpecFun_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "9db77584158d0ab52307f8c04f8e7c08ca76b5b3"
+uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
+version = "0.5.3+4"
+
+[[OrderedCollections]]
+git-tree-sha1 = "cf59cfed2e2c12e8a2ff0a4f1e9b2cd8650da6db"
+uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+version = "1.3.2"
+
+[[Pkg]]
+deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
+uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[[PolynomialBasis]]
+deps = ["DynamicPolynomials", "StaticPolynomials"]
+git-tree-sha1 = "c34ebc24ba5127917ebe7797fb188d13fbcda068"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/PolynomialBasis.jl.git"
+uuid = "776a168a-1973-4f1d-bada-3c06b642fffd"
+version = "0.1.0"
+
+[[Printf]]
+deps = ["Unicode"]
+uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[REPL]]
+deps = ["InteractiveUtils", "Markdown", "Sockets"]
+uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+
+[[Random]]
+deps = ["Serialization"]
+uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[RecipesBase]]
+git-tree-sha1 = "b3fb709f3c97bfc6e948be68beeecb55a0b340ae"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.1.1"
+
+[[Reexport]]
+deps = ["Pkg"]
+git-tree-sha1 = "7b1d07f411bc8ddb7977ec7f377b97b158514fe0"
+uuid = "189a3867-3050-52da-a836-e630ba90ab69"
+version = "0.2.0"
+
+[[Roots]]
+deps = ["Printf"]
+git-tree-sha1 = "8f743e4f4368d1d753f3806bf635899dad6b4847"
+uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+version = "1.0.7"
+
+[[RoundingEmulator]]
+git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
+uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
+version = "0.2.1"
+
+[[SHA]]
+uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+
+[[Serialization]]
+uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[SetRounding]]
+deps = ["Test"]
+git-tree-sha1 = "faca28c7937138d560ede5bfef2076d0cdf3584b"
+uuid = "3cc68bcd-71a2-5612-b932-767ffbe40ab0"
+version = "0.2.0"
+
+[[SharedArrays]]
+deps = ["Distributed", "Mmap", "Random", "Serialization"]
+uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
+
+[[Sockets]]
+uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
+
+[[SparseArrays]]
+deps = ["LinearAlgebra", "Random"]
+uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[[SpecialFunctions]]
+deps = ["ChainRulesCore", "OpenSpecFun_jll"]
+git-tree-sha1 = "75394dbe2bd346beeed750fb02baa6445487b862"
+uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
+version = "1.2.1"
+
+[[StaticArrays]]
+deps = ["LinearAlgebra", "Random", "Statistics"]
+git-tree-sha1 = "da4cf579416c81994afd6322365d00916c79b8ae"
+uuid = "90137ffa-7385-5640-81b9-e52037218182"
+version = "0.12.5"
+
+[[StaticPolynomials]]
+deps = ["LinearAlgebra", "MultivariatePolynomials", "StaticArrays"]
+git-tree-sha1 = "9e09adda0ec090ff6fd32af93eb663558c8e3a17"
+uuid = "62e018b1-6e46-5407-a5a7-97d4fbcae734"
+version = "1.3.3"
+
+[[Statistics]]
+deps = ["LinearAlgebra", "SparseArrays"]
+uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[[Test]]
+deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
+uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[UUIDs]]
+deps = ["Random", "SHA"]
+uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[[Unicode]]
+uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
