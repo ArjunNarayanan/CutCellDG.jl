@@ -21,3 +21,7 @@ end
 function ==(c1::CutCellDG.CellMap, c2::CutCellDG.CellMap)
     return isequal(c1, c2)
 end
+
+function plane_distance_function(coords, normal, x0)
+    return (coords .- x0)' * normal
+end

@@ -28,3 +28,14 @@ end
 function widths(mesh::UniformMesh)
     return mesh.widths
 end
+
+function cell_sign_to_row(s)
+    (s == -1 || s == +1) || error("Use ±1 to index into rows (i.e. phase), got index = $s")
+    row = s == +1 ? 1 : 2
+    return row
+end
+
+function levelset_coefficients(distancefunc,mesh)
+    nodalcoordinates = nodal_coordinates(mesh)
+    return distancefunc(nodalcoordinates)
+end
