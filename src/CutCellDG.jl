@@ -13,5 +13,8 @@ include("cell_map.jl")
 include("dg_mesh.jl")
 include("cut_mesh.jl")
 include("cell_quadratures.jl")
+include("face_quadratures.jl")
+include("interface_quadratures.jl")
+include("cell_merging.jl")
 
 end

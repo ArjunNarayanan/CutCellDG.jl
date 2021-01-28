@@ -25,3 +25,7 @@ end
 function plane_distance_function(coords, normal, x0)
     return (coords .- x0)' * normal
 end
+
+function ≈(q1::QuadratureRule, q2::QuadratureRule)
+    flag = allapprox(q1.points, q2.points) && allapprox(q1.weights, q2.weights)
+end

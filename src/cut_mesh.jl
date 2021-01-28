@@ -54,6 +54,10 @@ function background_mesh(cutmesh::CutMesh)
     return cutmesh.mesh
 end
 
+function cell_map(cutmesh::CutMesh,cellid)
+    return cell_map(cutmesh.mesh,cellid)
+end
+
 function nodal_connectivity(cutmesh::CutMesh, s, cellid)
     row = cell_sign_to_row(s)
     ncells = cutmesh.ncells

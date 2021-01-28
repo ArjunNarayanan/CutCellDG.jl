@@ -60,3 +60,31 @@ function CellQuadratures(
     end
     return CellQuadratures(quads, celltoquad)
 end
+
+function CellQuadratures(levelset, levelsetcoeffs, cutmesh, numqp)
+    return CellQuadratures(levelset, levelsetcoeffs, cutmesh, numqp, numqp)
+end
+
+function Base.getindex(vquads::CellQuadratures, s, cellid)
+    row = cell_sign_to_row(s)
+    idx = vquads.celltoquad[row, cellid]
+    idx > 0 || error("Cell $cellid, cellsign $s, does not have a cell quadrature")
+    return vquads.quads[vquads.celltoquad[row, cellid]]
+end
+
+function Base.show(io::IO, cellquads::CellQuadratures)
+    ncells = cellquads.ncells
+    nuniquequads = length(cellquads.quads)
+    str = "CellQuadratures\n\tNum. Cells: $ncells\n\tNum. Unique Quadratures: $nuniquequads"
+    print(io, str)
+end
+
+function uniform_cell_quadrature(vquads::CellQuadratures)
+    return vquads.quads[1]
+end
+
+function update_cell_quadrature!(cellquads::CellQuadratures, s, cellid, quad)
+    row = cell_sign_to_row(s)
+    idx = cellquads.celltoquad[row, cellid]
+    cellquads.quads[idx] = quad
+end
