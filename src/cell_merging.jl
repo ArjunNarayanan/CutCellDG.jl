@@ -222,12 +222,29 @@ function merge_cell_with_suitable_neighbor!(
     )
 end
 
+struct MergedMesh
+    mergedwithcell::Any
+    cutmesh::Any
+    nodelabeltonodeid::Any
+    numnodes::Any
+    function MergedMesh(cutmesh, mergedwithcell)
+        activenodelabels = active_node_labels(cutmesh, mergedwithcell)
+        maxlabel = maximum(activenodelabels)
+        nodelabeltonodeid = zeros(Int, maxlabel)
+        for (idx, label) in enumerate(activenodelabels)
+            nodelabeltonodeid[label] = idx
+        end
+        numnodes = length(activenodelabels)
+        new(mergedwithcell, cutmesh, nodelabeltonodeid, numnodes)
+    end
+end
+
 function merge_tiny_cells_in_mesh!(
+    cutmesh,
     cellquads,
     facequads,
-    interfacequads,
-    cutmesh,
-    tinyratio,
+    interfacequads;
+    tinyratio = 0.2,
 )
     ncells = number_of_cells(cutmesh)
 
@@ -275,24 +292,7 @@ function merge_tiny_cells_in_mesh!(
             end
         end
     end
-    return MergedMesh(cutmesh,mergedwithcell)
-end
-
-struct MergedMesh
-    mergedwithcell::Any
-    cutmesh::Any
-    nodelabeltonodeid::Any
-    numnodes::Any
-    function MergedMesh(cutmesh,mergedwithcell)
-        activenodelabels = active_node_labels(cutmesh,mergedwithcell)
-        maxlabel = maximum(activenodelabels)
-        nodelabeltonodeid = zeros(Int, maxlabel)
-        for (idx, label) in enumerate(activenodelabels)
-            nodelabeltonodeid[label] = idx
-        end
-        numnodes = length(activenodelabels)
-        new(mergedwithcell, cutmesh, nodelabeltonodeid, numnodes)
-    end
+    return mergedwithcell
 end
 
 function number_of_nodes(mergedmesh::MergedMesh)
@@ -318,11 +318,11 @@ function active_node_labels(cutmesh, mergedwithcell)
     for cellid = 1:numcells
         s = cell_sign(cutmesh, cellid)
         if s == +1 || s == 0
-            mergecellid = merged_with_cell(mergedwithcell,+1,cellid)
+            mergecellid = merged_with_cell(mergedwithcell, +1, cellid)
             append!(activenodeids, nodal_connectivity(cutmesh, +1, mergecellid))
         end
         if s == -1 || s == 0
-            mergecellid = merged_with_cell(mergedwithcell,-1,cellid)
+            mergecellid = merged_with_cell(mergedwithcell, -1, cellid)
             append!(activenodeids, nodal_connectivity(cutmesh, -1, mergecellid))
         end
     end

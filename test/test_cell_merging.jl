@@ -1,5 +1,4 @@
 using Test
-using LinearAlgebra
 using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
@@ -52,13 +51,22 @@ mesh = CutCellDG.DGMesh([0.0, 0.0], [2.0, 1.0], [2, 1], basis)
 
 normal = [1.0, 0.0]
 x0 = [1.1, 0.0]
-levelsetcoeffs =
-    CutCellDG.levelset_coefficients(x -> plane_distance_function(x, normal, x0), mesh)
+levelsetcoeffs = CutCellDG.levelset_coefficients(
+    x -> plane_distance_function(x, normal, x0),
+    mesh,
+)
 
 cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
 cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-facequads = CutCellDG.FaceQuadratures(cutmesh,levelset,levelsetcoeffs,numqp)
+interfacequads =
+    CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
 
-mergedmesh = CutCellDG.merge_tiny_cells_in_mesh!(cellquads,facequads,interfacequads,cutmesh,0.2)
+mergedwithcell = CutCellDG.merge_tiny_cells_in_mesh!(
+    cutmesh,
+    cellquads,
+    facequads,
+    interfacequads,
+)
+mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 @test CutCellDG.number_of_nodes(mergedmesh) == 8

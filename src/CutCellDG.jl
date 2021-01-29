@@ -16,6 +16,6 @@ include("cell_quadratures.jl")
 include("face_quadratures.jl")
 include("interface_quadratures.jl")
 include("cell_merging.jl")
-include("elasticity_coefficients.jl")
+include("hooke_stiffness.jl")
 
 end
