@@ -67,3 +67,25 @@ function normalize_normals!(normals)
         normals[:,i] .= n/norm(n)
     end
 end
+
+function points(quad::QuadratureRule)
+    return quad.points
+end
+
+function weights(quad::QuadratureRule)
+    return quad.weights
+end
+
+function opposite_face(faceid)
+    if faceid == 1
+        return 3
+    elseif faceid == 2
+        return 4
+    elseif faceid == 3
+        return 1
+    elseif faceid == 4
+        return 2
+    else
+        error("Expected faceid ∈ {1,2,3,4} got faceid = $faceid")
+    end
+end

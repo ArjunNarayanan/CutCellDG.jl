@@ -23,3 +23,7 @@ end
 @safetestset "Test Interface Quadratures" begin
     include("test_interface_quadratures.jl")
 end
+
+@safetestset "Test Cell Merging" begin
+    include("test_cell_merging.jl")
+end

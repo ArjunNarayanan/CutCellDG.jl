@@ -61,8 +61,8 @@ function CellQuadratures(
     return CellQuadratures(quads, celltoquad)
 end
 
-function CellQuadratures(levelset, levelsetcoeffs, cutmesh, numqp)
-    return CellQuadratures(levelset, levelsetcoeffs, cutmesh, numqp, numqp)
+function CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    return CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp, numqp)
 end
 
 function Base.getindex(vquads::CellQuadratures, s, cellid)

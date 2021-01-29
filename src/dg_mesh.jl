@@ -118,7 +118,7 @@ function nodal_coordinates(mesh::DGMesh,cellid::Int)
     return mesh.nodal_coordinates[:,nodeids]
 end
 
-function cell_connectivity(mesh::DGMesh,faceid::Int,cellid::Int)
+function cell_connectivity(mesh::DGMesh,faceid,cellid)
     return mesh.cellconnectivity[faceid,cellid]
 end
 

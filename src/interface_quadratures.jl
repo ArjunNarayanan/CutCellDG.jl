@@ -42,13 +42,13 @@ function InterfaceQuadratures(
 
         try
             squad = surface_quadrature(levelset, xL, xR, numqp, numsplits = 2)
-            n = levelset_normals(levelset, squad.points, invjac)
+            n = levelset_normals(levelset, points(squad), invjac)
             quads[1, counter] = squad
             quads[2, counter] = squad
             normals[counter] = n
         catch e
             squad = surface_quadrature(levelset,xL,xR,numqp,numsplits = 3)
-            n = levelset_normals(levelset, squad.points, invjac)
+            n = levelset_normals(levelset, points(squad), invjac)
             quads[1, counter] = squad
             quads[2, counter] = squad
             normals[counter] = n
