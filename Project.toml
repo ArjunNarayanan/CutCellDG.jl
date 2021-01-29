@@ -12,6 +12,7 @@ PolynomialBasis = "776a168a-1973-4f1d-bada-3c06b642fffd"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+NearestNeighbors = "0.4"
 julia = "1"
 
 [extras]
