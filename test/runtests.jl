@@ -27,3 +27,7 @@ end
 @safetestset "Test Cell Merging" begin
     include("test_cell_merging.jl")
 end
+
+@safetestset "Test Hooke Stiffness" begin
+    include("test_hooke_stiffness.jl")
+end
