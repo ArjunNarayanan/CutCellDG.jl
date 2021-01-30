@@ -29,14 +29,6 @@ function widths(mesh::UniformMesh)
     return mesh.widths
 end
 
-function jacobian(mesh)
-    return jacobian(cell_map(mesh,1))
-end
-
-function inverse_jacobian(mesh)
-    return inverse_jacobian(cell_map(mesh,1))
-end
-
 function cell_sign_to_row(s)
     (s == -1 || s == +1) || error("Use ±1 to index into rows (i.e. phase), got index = $s")
     row = s == +1 ? 1 : 2
@@ -88,4 +80,21 @@ function opposite_face(faceid)
     else
         error("Expected faceid ∈ {1,2,3,4} got faceid = $faceid")
     end
+end
+
+function jacobian(mesh)
+    return jacobian(background_mesh(mesh))
+end
+
+function inverse_jacobian(mesh)
+    return jacobian(background_mesh(mesh))
+end
+
+function dimension(mesh)
+    return dimension(background_mesh(mesh))
+end
+
+function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
+
+    return NF
 end

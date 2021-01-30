@@ -157,3 +157,11 @@ function dg_nodal_connectivity(numelements, nodesperelement)
     nodalconnectivity = reshape(nodeids, nodesperelement, numelements)
     return nodalconnectivity
 end
+
+function jacobian(mesh::DGMesh)
+    return jacobian(cell_map(mesh,1))
+end
+
+function inverse_jacobian(mesh::DGMesh)
+    return inverse_jacobian(cell_map(mesh,1))
+end

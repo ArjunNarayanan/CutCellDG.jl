@@ -295,7 +295,7 @@ function merge_tiny_cells_in_mesh!(
     return mergedwithcell
 end
 
-function unmerged_mesh(mergedmesh::MergedMesh)
+function background_mesh(mergedmesh::MergedMesh)
     return mergedmesh.cutmesh
 end
 
@@ -303,12 +303,25 @@ function number_of_nodes(mergedmesh::MergedMesh)
     return mergedmesh.numnodes
 end
 
-function dimension(mergedmesh::MergedMesh)
-    return dimension(unmerged_mesh(mergedmesh))
-end
-
 function number_of_cells(mergedmesh::MergedMesh)
     return number_of_cells(mergedmesh.cutmesh)
+end
+
+function cell_map(mergedmesh::MergedMesh,cellsign,cellid)
+    row = cell_sign_to_row(cellsign)
+    mergecellid = merged_with_cell(mergedmesh.mergedwithcell,cellsign,cellid)
+    return cell_map(mergedmesh.cutmesh,mergecellid)
+end
+
+function cell_sign(mergedmesh::MergedMesh,cellid)
+    return cell_sign(background_mesh(mergedmesh),cellid)
+end
+
+function nodal_connectivity(mergedmesh::MergedMesh,cellsign,cellid)
+    row = cell_sign_to_row(cellsign)
+    mergecellid = merged_with_cell(mergedmesh.mergedwithcell,cellsign,cellid)
+    nodelabels = nodal_connectivity(mergedmesh.cutmesh,cellsign,mergecellid)
+    return mergedmesh.nodelabeltonodeid[nodelabels]
 end
 
 function Base.show(io::IO, mergedmesh::MergedMesh)

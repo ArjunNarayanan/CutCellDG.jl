@@ -24,8 +24,7 @@ function transform_gradient(gradf, jacobian)
     return gradf / Diagonal(jacobian)
 end
 
-function displacement_bilinear_form(basis, quad, stiffness, jacobian)
-    dim = dimension(basis)
+function displacement_bilinear_form(basis, quad, stiffness, jacobian, dim)
     nf = number_of_basis_functions(basis)
     ndofs = dim * nf
     matrix = zeros(ndofs, ndofs)
@@ -69,7 +68,6 @@ function component_mass_matrix(basis, quad1, quad2, components, scale, ndofs)
     numqp = length(quad1)
     @assert length(quad2) == length(scale) == size(components)[2] == numqp
     nf = number_of_basis_functions(basis)
-    dim = dimension(basis)
     totaldofs = ndofs * nf
     matrix = zeros(totaldofs, totaldofs)
     for qpidx = 1:numqp
@@ -83,7 +81,7 @@ function component_mass_matrix(basis, quad1, quad2, components, scale, ndofs)
         vals1 = basis(p1)
         vals2 = basis(p2)
 
-        NI1 = interpolation_matrix(vals1, dim)
+        NI1 = interpolation_matrix(vals1, ndofs)
         NI2 = make_row_matrix(projector, vals2)
 
         matrix .+= NI1' * NI2 * scale[qpidx] * w1

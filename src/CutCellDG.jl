@@ -19,5 +19,6 @@ include("cell_merging.jl")
 include("hooke_stiffness.jl")
 include("weak_form.jl")
 include("assembly.jl")
+include("assemble_displacement_bilinear_forms.jl")
 
 end
