@@ -31,7 +31,7 @@ function cell_sign(cutmesh::CutMesh, cellid)
 end
 
 function dimension(cutmesh::CutMesh)
-    return dimension(cutmesh.mesh)
+    return dimension(background_mesh(cutmesh))
 end
 
 function number_of_nodes(cutmesh::CutMesh)
@@ -39,11 +39,11 @@ function number_of_nodes(cutmesh::CutMesh)
 end
 
 function reference_corner(cutmesh::CutMesh)
-    return reference_corner(cutmesh.mesh)
+    return reference_corner(background_mesh(cutmesh))
 end
 
 function widths(cutmesh::CutMesh)
-    return widths(cutmesh.mesh)
+    return widths(background_mesh(cutmesh))
 end
 
 function number_of_cells(cutmesh::CutMesh)
@@ -55,7 +55,7 @@ function background_mesh(cutmesh::CutMesh)
 end
 
 function cell_map(cutmesh::CutMesh,cellid)
-    return cell_map(cutmesh.mesh,cellid)
+    return cell_map(background_mesh(cutmesh),cellid)
 end
 
 function nodal_connectivity(cutmesh::CutMesh, s, cellid)
@@ -65,7 +65,7 @@ function nodal_connectivity(cutmesh::CutMesh, s, cellid)
     cs = cell_sign(cutmesh, cellid)
     @assert cs == s || cs == 0 || error("Requested nodeids for sign $s not consistent with cell sign $cs for cellid $cellid")
 
-    ids = nodal_connectivity(cutmesh.mesh,cellid)
+    ids = nodal_connectivity(background_mesh(cutmesh),cellid)
     nodeids = cutmesh.cutmeshnodeids[row, ids]
     return nodeids
 end

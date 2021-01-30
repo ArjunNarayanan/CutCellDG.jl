@@ -17,5 +17,7 @@ include("face_quadratures.jl")
 include("interface_quadratures.jl")
 include("cell_merging.jl")
 include("hooke_stiffness.jl")
+include("weak_form.jl")
+include("assembly.jl")
 
 end

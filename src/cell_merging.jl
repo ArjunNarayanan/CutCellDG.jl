@@ -295,8 +295,16 @@ function merge_tiny_cells_in_mesh!(
     return mergedwithcell
 end
 
+function unmerged_mesh(mergedmesh::MergedMesh)
+    return mergedmesh.cutmesh
+end
+
 function number_of_nodes(mergedmesh::MergedMesh)
     return mergedmesh.numnodes
+end
+
+function dimension(mergedmesh::MergedMesh)
+    return dimension(unmerged_mesh(mergedmesh))
 end
 
 function number_of_cells(mergedmesh::MergedMesh)

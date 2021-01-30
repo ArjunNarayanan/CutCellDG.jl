@@ -122,11 +122,6 @@ function cell_connectivity(mesh::DGMesh,faceid,cellid)
     return mesh.cellconnectivity[faceid,cellid]
 end
 
-function number_of_degrees_of_freedom(mesh::DGMesh,dofspernode::Int)
-    numnodes = number_of_nodes(mesh)
-    return dofspernode*numnodes
-end
-
 function is_interior_cell(mesh::DGMesh,cellid::Int)
     return mesh.isinteriorcell[cellid]
 end

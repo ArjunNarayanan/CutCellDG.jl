@@ -31,3 +31,7 @@ end
 @safetestset "Test Hooke Stiffness" begin
     include("test_hooke_stiffness.jl")
 end
+
+@safetestset "Test Assembly" begin
+    include("test_assembly.jl")
+end
