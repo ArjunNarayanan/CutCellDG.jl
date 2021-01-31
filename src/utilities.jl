@@ -98,6 +98,10 @@ function face_determinant_jacobian(mesh)
     return face_determinant_jacobian(background_mesh(mesh))
 end
 
+function cell_connectivity(mesh,faceid,cellid)
+    return cell_connectivity(background_mesh(mesh),faceid,cellid)
+end
+
 function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
 
     return NF

@@ -6,13 +6,22 @@ function assemble_cut_cell_displacement_bilinear_form!(
     mesh,
     cellsign,
     cellid,
+    vectosymmconverter,
 )
 
     dim = dimension(mesh)
     jac = jacobian(mesh)
     quad = cellquads[cellsign, cellid]
-    cellmatrix =
-        vec(displacement_bilinear_form(basis, quad, stiffness[cellsign], jac, dim))
+    cellmatrix = vec(
+        displacement_bilinear_form(
+            basis,
+            quad,
+            stiffness[cellsign],
+            jac,
+            dim,
+            vectosymmconverter,
+        ),
+    )
     nodeids = nodal_connectivity(mesh, cellsign, cellid)
     assemble_cell_matrix!(sysmatrix, nodeids, dim, cellmatrix)
 end
@@ -28,12 +37,29 @@ function assemble_displacement_bilinear_forms!(
     ncells = number_of_cells(mesh)
     jac = jacobian(mesh)
     dim = dimension(mesh)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
 
     uniformquad = uniform_cell_quadrature(cellquads)
-    uniformbf1 =
-        vec(displacement_bilinear_form(basis, uniformquad, stiffness[+1], jac, dim))
-    uniformbf2 =
-        vec(displacement_bilinear_form(basis, uniformquad, stiffness[-1], jac, dim))
+    uniformbf1 = vec(
+        displacement_bilinear_form(
+            basis,
+            uniformquad,
+            stiffness[+1],
+            jac,
+            dim,
+            vectosymmconverter,
+        ),
+    )
+    uniformbf2 = vec(
+        displacement_bilinear_form(
+            basis,
+            uniformquad,
+            stiffness[-1],
+            jac,
+            dim,
+            vectosymmconverter,
+        ),
+    )
 
     uniformcellmatrices = [uniformbf1, uniformbf2]
 
@@ -55,6 +81,7 @@ function assemble_displacement_bilinear_forms!(
                 mesh,
                 +1,
                 cellid,
+                vectosymmconverter,
             )
             assemble_cut_cell_displacement_bilinear_form!(
                 sysmatrix,
@@ -64,6 +91,7 @@ function assemble_displacement_bilinear_forms!(
                 mesh,
                 -1,
                 cellid,
+                vectosymmconverter,
             )
         end
     end

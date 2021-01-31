@@ -28,45 +28,55 @@ function interelement_traction_operators(
     quad2,
     normal,
     stiffness,
+    dim,
     facedetjac,
     jac,
+    vectosymmconverter,
     eta,
 )
-    nntop = face_traction_operator(
+    nntop = uniform_surface_traction_operator(
         basis,
         quad1,
         quad1,
         normal,
         stiffness,
+        dim,
         facedetjac,
         jac,
+        vectosymmconverter,
     )
-    nptop = face_traction_operator(
+    nptop = uniform_surface_traction_operator(
         basis,
         quad1,
         quad2,
         normal,
         stiffness,
+        dim,
         facedetjac,
         jac,
+        vectosymmconverter,
     )
-    pntop = face_traction_operator(
+    pntop = uniform_surface_traction_operator(
         basis,
         quad2,
         quad1,
         normal,
         stiffness,
+        dim,
         facedetjac,
         jac,
+        vectosymmconverter,
     )
-    pptop = face_traction_operator(
+    pptop = uniform_surface_traction_operator(
         basis,
         quad2,
         quad2,
         normal,
         stiffness,
+        dim,
         facedetjac,
         jac,
+        vectosymmconverter,
     )
 
     return InterElementTractionOperatorValues(nntop, nptop, pntop, pptop, eta)
@@ -87,8 +97,7 @@ struct InterElementMassOperatorValues
     end
 end
 
-function interelement_mass_operators(basis, quad1, quad2, facescale)
-    dim = dimension(basis)
+function interelement_mass_operators(basis, quad1, quad2, dim, facescale)
     nn = mass_matrix(basis, quad1, quad1, facescale, dim)
     np = mass_matrix(basis, quad1, quad2, facescale, dim)
     pn = mass_matrix(basis, quad2, quad1, facescale, dim)
@@ -114,6 +123,7 @@ function assemble_interelement_condition!(
     jac = jacobian(mesh)
     nfaces = number_of_faces_per_cell(facequads)
     dim = dimension(mesh)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
 
     faceids = 1:nfaces
     nbrfaceids = [opposite_face(faceid) for faceid in faceids]
@@ -125,8 +135,10 @@ function assemble_interelement_condition!(
             uniformquads[nbrfaceids[faceid]],
             normals[faceid],
             stiffness[+1],
+            dim,
             facedetjac[faceid],
             jac,
+            vectosymmconverter,
             eta,
         ) for faceid in faceids
     ]
@@ -137,8 +149,10 @@ function assemble_interelement_condition!(
             uniformquads[nbrfaceids[faceid]],
             normals[faceid],
             stiffness[-1],
+            dim,
             facedetjac[faceid],
             jac,
+            vectosymmconverter,
             eta,
         ) for faceid in faceids
     ]
@@ -149,6 +163,7 @@ function assemble_interelement_condition!(
             basis,
             uniformquads[faceid],
             uniformquads[nbrfaceids[faceid]],
+            dim,
             penalty * facedetjac[faceid],
         ) for faceid in faceids
     ]
@@ -157,7 +172,7 @@ function assemble_interelement_condition!(
 
     for cellid = 1:ncells
         cellsign = cell_sign(mesh, cellid)
-        @assert cellsign == +1 || cellsign == -1
+        @assert cellsign == +1 || cellsign == -1 || cellsign == 0
         if cellsign == +1 || cellsign == -1
             assemble_uniform_cell_interelement_condition!(
                 sysmatrix,
@@ -180,6 +195,7 @@ function assemble_interelement_condition!(
                 faceids,
                 facedetjac,
                 jac,
+                vectosymmconverter,
                 penalty,
                 eta,
             )
@@ -194,6 +210,7 @@ function assemble_interelement_condition!(
                 faceids,
                 facedetjac,
                 jac,
+                vectosymmconverter,
                 penalty,
                 eta,
             )
@@ -246,6 +263,7 @@ function assemble_cut_cell_interelement_condition!(
     faceids,
     facedetjac,
     jac,
+    vectosymmconverter,
     penalty,
     eta,
 )
@@ -267,14 +285,17 @@ function assemble_cut_cell_interelement_condition!(
                     facequads[cellsign, nbrfaceids[faceid], nbrcellid],
                     normals[faceid],
                     stiffness[cellsign],
+                    dim,
                     facedetjac[faceid],
                     jac,
+                    vectosymmconverter,
                     eta,
                 )
                 massop = interelement_mass_operators(
                     basis,
                     facequads[cellsign, faceid, cellid],
                     facequads[cellsign, nbrfaceids[faceid], nbrcellid],
+                    dim,
                     penalty * facedetjac[faceid],
                 )
                 assemble_face_interelement_condition!(

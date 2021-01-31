@@ -307,20 +307,24 @@ function number_of_cells(mergedmesh::MergedMesh)
     return number_of_cells(mergedmesh.cutmesh)
 end
 
-function cell_map(mergedmesh::MergedMesh,cellsign,cellid)
+function cell_map(mergedmesh::MergedMesh, cellsign, cellid)
     row = cell_sign_to_row(cellsign)
-    mergecellid = merged_with_cell(mergedmesh.mergedwithcell,cellsign,cellid)
-    return cell_map(mergedmesh.cutmesh,mergecellid)
+    mergecellid = merged_with_cell(mergedmesh.mergedwithcell, cellsign, cellid)
+    return cell_map(mergedmesh.cutmesh, mergecellid)
 end
 
-function cell_sign(mergedmesh::MergedMesh,cellid)
-    return cell_sign(background_mesh(mergedmesh),cellid)
+function solution_cell_id(mergedmesh::MergedMesh, cellsign, cellid)
+    return merged_with_cell(mergedmesh.mergedwithcell, cellsign, cellid)
 end
 
-function nodal_connectivity(mergedmesh::MergedMesh,cellsign,cellid)
+function cell_sign(mergedmesh::MergedMesh, cellid)
+    return cell_sign(background_mesh(mergedmesh), cellid)
+end
+
+function nodal_connectivity(mergedmesh::MergedMesh, cellsign, cellid)
     row = cell_sign_to_row(cellsign)
-    mergecellid = merged_with_cell(mergedmesh.mergedwithcell,cellsign,cellid)
-    nodelabels = nodal_connectivity(mergedmesh.cutmesh,cellsign,mergecellid)
+    mergecellid = merged_with_cell(mergedmesh.mergedwithcell, cellsign, cellid)
+    nodelabels = nodal_connectivity(mergedmesh.cutmesh, cellsign, mergecellid)
     return mergedmesh.nodelabeltonodeid[nodelabels]
 end
 
