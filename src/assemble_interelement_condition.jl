@@ -64,7 +64,7 @@ function assemble_interelement_condition!(
 
     for cellid = 1:ncells
         cellsign = cell_sign(mesh, cellid)
-        @assert cellsign == +1 || cellsign == -1 || cellsign == 0
+        check_cellsign(cellsign)
         if cellsign == +1 || cellsign == -1
             assemble_uniform_cell_interelement_condition!(
                 sysmatrix,

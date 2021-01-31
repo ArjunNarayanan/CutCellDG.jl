@@ -64,12 +64,12 @@ function assemble_displacement_bilinear_forms!(
     uniformcellmatrices = [uniformbf1, uniformbf2]
 
     for cellid = 1:ncells
-        s = cell_sign(mesh, cellid)
-        @assert s == +1 || s == 0 || s == -1
-        if s == +1
+        cellsign = cell_sign(mesh, cellid)
+        check_cellsign(cellsign)
+        if cellsign == +1
             nodeids = nodal_connectivity(mesh, +1, cellid)
             assemble_cell_matrix!(sysmatrix, nodeids, dim, uniformbf1)
-        elseif s == -1
+        elseif cellsign == -1
             nodeids = nodal_connectivity(mesh, -1, cellid)
             assemble_cell_matrix!(sysmatrix, nodeids, dim, uniformbf2)
         else

@@ -100,3 +100,14 @@ function sparse_displacement_operator(sysmatrix, mesh)
     totaldofs = dim*numnodes
     return sparse_operator(sysmatrix, totaldofs)
 end
+
+function rhs_vector(sysrhs,ndofs)
+    return Array(sparsevec(sysrhs.rows,sysrhs.vals,ndofs))
+end
+
+function displacement_rhs_vector(sysrhs,mesh)
+    numnodes = number_of_nodes(mesh)
+    dim = dimension(mesh)
+    totaldofs = dim*numnodes
+    return rhs_vector(sysrhs, totaldofs)
+end

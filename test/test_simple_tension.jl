@@ -7,7 +7,7 @@ include("useful_routines.jl")
 
 x0 = [0.0, 0.0]
 widths = [4.0, 1.0]
-nelements = [2, 2]
+nelements = [1, 2]
 
 interfacepoint = [-1.0, 0.0]
 interfacenormal = [1.0, 0.0]
@@ -58,24 +58,26 @@ CutCellDG.assemble_interelement_condition!(
     eta,
 )
 
-CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, leftbc, cutmesh)
-CutCellDG.assemble_penalty_displacement_bc!(
-    sysmatrix,
-    sysrhs,
-    bottombc,
-    cutmesh,
-)
-CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, rightbc, cutmesh)
+# CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, leftbc, cutmesh)
+# CutCellDG.assemble_penalty_displacement_bc!(
+#     sysmatrix,
+#     sysrhs,
+#     bottombc,
+#     cutmesh,
+# )
+# CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, rightbc, cutmesh)
 
-op = CutCellDG.make_sparse(sysmatrix, cutmesh)
-rhs = CutCellDG.rhs(sysrhs, cutmesh)
+op = CutCellDG.sparse_displacement_operator(sysmatrix, cutmesh)
+rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
 
-sol = op \ rhs
-disp = reshape(sol, 2, :)
+K = Array(op)
 
-nodalcoordinates = CutCellDG.nodal_coordinates(cutmesh)
-testdisp = copy(nodalcoordinates)
-testdisp[1, :] .*= e11
-testdisp[2, :] .*= e22
-
-@test allapprox(disp, testdisp, 1e2eps())
+# sol = op \ rhs
+# disp = reshape(sol, 2, :)
+#
+# nodalcoordinates = CutCellDG.nodal_coordinates(cutmesh)
+# testdisp = copy(nodalcoordinates)
+# testdisp[1, :] .*= e11
+# testdisp[2, :] .*= e22
+#
+# @test allapprox(disp, testdisp, 1e2eps())

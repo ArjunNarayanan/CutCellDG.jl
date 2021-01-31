@@ -23,5 +23,6 @@ include("assembly.jl")
 include("assemble_displacement_bilinear_forms.jl")
 include("assemble_interelement_condition.jl")
 include("assemble_interface_condition.jl")
+include("assemble_penalty_displacement_bc.jl")
 
 end

@@ -114,3 +114,32 @@ function reference_face_normals()
     n4 = [-1.,0.]
     return [n1,n2,n3,n4]
 end
+
+function reference_bottom_face_midpoint()
+    [0.0, -1.0]
+end
+
+function reference_right_face_midpoint()
+    [1.0, 0.0]
+end
+
+function reference_top_face_midpoint()
+    [0.0, 1.0]
+end
+
+function reference_left_face_midpoint()
+    [-1.0, 0.0]
+end
+
+function reference_face_midpoints()
+    [
+        reference_bottom_face_midpoint(),
+        reference_right_face_midpoint(),
+        reference_top_face_midpoint(),
+        reference_left_face_midpoint(),
+    ]
+end
+
+function check_cellsign(cellsign)
+    @assert cellsign == +1 || cellsign == -1 || cellsign == 0
+end
