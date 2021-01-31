@@ -46,7 +46,7 @@ function coherent_traction_operators(
         jac,
         vectosymmconverter,
     )
-    nptop = uniform_surface_traction_operator(
+    nptop = surface_traction_operator(
         basis,
         quad1,
         quad2,
@@ -57,7 +57,7 @@ function coherent_traction_operators(
         jac,
         vectosymmconverter,
     )
-    pntop = uniform_surface_traction_operator(
+    pntop = surface_traction_operator(
         basis,
         quad2,
         quad1,
@@ -68,7 +68,7 @@ function coherent_traction_operators(
         jac,
         vectosymmconverter,
     )
-    pptop = uniform_surface_traction_operator(
+    pptop = surface_traction_operator(
         basis,
         quad2,
         quad2,
@@ -81,6 +81,36 @@ function coherent_traction_operators(
     )
 
     return InterfaceTractionOperatorValues(nntop, nptop, pntop, pptop, eta)
+end
+
+function interelement_traction_operators(
+    basis,
+    quad1,
+    quad2,
+    normal,
+    stiffness,
+    dim,
+    facedetjac,
+    jac,
+    vectosymmconverter,
+    eta,
+)
+    numqp = length(quad1)
+    facescale = repeat([facedetjac], numqp)
+    normals = repeat(normal, inner = (1, numqp))
+    return coherent_traction_operators(
+        basis,
+        quad1,
+        quad2,
+        normals,
+        stiffness,
+        stiffness,
+        dim,
+        facescale,
+        jac,
+        vectosymmconverter,
+        eta,
+    )
 end
 
 struct InterfaceMassOperatorValues
@@ -105,4 +135,10 @@ function interface_mass_operators(basis, quad1, quad2, dim, facescale)
     pp = mass_matrix(basis, quad2, quad2, dim, facescale)
 
     return InterfaceMassOperatorValues(nn, np, pn, pp)
+end
+
+function interelement_mass_operators(basis,quad1,quad2,dim,scale)
+    numqp = length(quad1)
+    facescale = repeat([scale],numqp)
+    return interface_mass_operators(basis,quad1,quad2,dim,facescale)
 end

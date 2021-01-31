@@ -46,9 +46,9 @@ function displacement_bilinear_form(
     return matrix
 end
 
-function mass_matrix(basis, quad1, quad2, detjac, ndofs)
+function mass_matrix(basis, quad1, quad2, ndofs, facescale)
     numqp = length(quad1)
-    @assert length(quad2) == numqp
+    @assert length(quad2) == length(facescale) == numqp
     nf = number_of_basis_functions(basis)
     totaldofs = ndofs * nf
     matrix = zeros(totaldofs, totaldofs)
@@ -63,13 +63,9 @@ function mass_matrix(basis, quad1, quad2, detjac, ndofs)
         NI1 = interpolation_matrix(vals1, ndofs)
         NI2 = interpolation_matrix(vals2, ndofs)
 
-        matrix .+= NI1' * NI2 * detjac * w1
+        matrix .+= NI1' * NI2 * facescale[qpidx] * w1
     end
     return matrix
-end
-
-function mass_matrix(basis, quad, detjac, ndofs)
-    return mass_matrix(basis, quad, quad, detjac, ndofs)
 end
 
 function surface_traction_operator(

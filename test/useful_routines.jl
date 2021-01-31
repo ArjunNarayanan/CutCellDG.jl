@@ -29,3 +29,7 @@ end
 function ≈(q1::QuadratureRule, q2::QuadratureRule)
     flag = allapprox(q1.points, q2.points) && allapprox(q1.weights, q2.weights)
 end
+
+function required_quadrature_order(polyorder)
+    ceil(Int, 0.5 * (2polyorder + 1))
+end
