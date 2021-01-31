@@ -110,31 +110,3 @@ function surface_traction_operator(
     end
     return matrix
 end
-
-function uniform_surface_traction_operator(
-    basis,
-    quad1,
-    quad2,
-    normal,
-    stiffness,
-    dim,
-    facedetjac,
-    jac,
-    vectosymmconverter,
-)
-
-    numqp = length(quad1)
-    extnormals = repeat(normal, inner = (1, numqp))
-    scalearea = repeat([facedetjac], numqp)
-    return surface_traction_operator(
-        basis,
-        quad1,
-        quad2,
-        extnormals,
-        stiffness,
-        dim,
-        scalearea,
-        jac,
-        vectosymmconverter,
-    )
-end
