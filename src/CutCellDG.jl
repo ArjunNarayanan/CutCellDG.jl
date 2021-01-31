@@ -21,5 +21,6 @@ include("weak_form.jl")
 include("assembly.jl")
 include("assemble_displacement_bilinear_forms.jl")
 include("assemble_interelement_condition.jl")
+include("assemble_interface_condition.jl")
 
 end

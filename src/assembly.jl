@@ -98,5 +98,5 @@ function sparse_displacement_operator(sysmatrix, mesh)
     numnodes = number_of_nodes(mesh)
     dim = dimension(mesh)
     totaldofs = dim*numnodes
-    return make_sparse(sysmatrix, totaldofs)
+    return sparse_operator(sysmatrix, totaldofs)
 end

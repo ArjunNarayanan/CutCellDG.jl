@@ -63,3 +63,6 @@ CutCellDG.assemble_interelement_condition!(
     penalty,
     eta,
 )
+
+# matrix = CutCellDG.sparse_displacement_operator(sysmatrix,mergedmesh)
+# K = Array(matrix)
