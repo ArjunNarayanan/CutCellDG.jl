@@ -7,7 +7,6 @@ struct DGMesh
     numcells::Any
     numnodes::Any
     nodesperelement::Any
-    isinteriorcell::Any
     x0
     meshwidths
     nelements
@@ -23,7 +22,6 @@ function DGMesh(mesh, refcoords)
     nodalcoordinates = dg_nodal_coordinates(cellmaps, refcoords)
     nodalconnectivity = dg_nodal_connectivity(numcells, nodesperelement)
     cellconnectivity = cell_connectivity(mesh)
-    isinteriorcell = is_interior_cell(cellconnectivity)
     x0 = reference_corner(mesh)
     meshwidths = widths(mesh)
     nelements = elements_per_mesh_side(mesh)
@@ -37,7 +35,6 @@ function DGMesh(mesh, refcoords)
         numcells,
         numnodes,
         nodesperelement,
-        isinteriorcell,
         x0,
         meshwidths,
         nelements
@@ -122,16 +119,6 @@ function cell_connectivity(mesh::DGMesh,faceid,cellid)
     return mesh.cellconnectivity[faceid,cellid]
 end
 
-function is_interior_cell(mesh::DGMesh,cellid::Int)
-    return mesh.isinteriorcell[cellid]
-end
-
-function is_interior_cell(cellconnectivity)
-    numcells = size(cellconnectivity)[2]
-    isinteriorcell = [all(cellconnectivity[:, i] .!= 0) for i = 1:numcells]
-    return isinteriorcell
-end
-
 function dg_nodal_coordinates(cellmaps, refcoords)
     dim, nodesperelement = size(refcoords)
     numcells = length(cellmaps)
@@ -164,4 +151,8 @@ end
 
 function inverse_jacobian(mesh::DGMesh)
     return inverse_jacobian(cell_map(mesh,1))
+end
+
+function face_determinant_jacobian(mesh::DGMesh)
+    return face_determinant_jacobian(cell_map(mesh,1))
 end

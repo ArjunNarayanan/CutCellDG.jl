@@ -20,5 +20,6 @@ include("hooke_stiffness.jl")
 include("weak_form.jl")
 include("assembly.jl")
 include("assemble_displacement_bilinear_forms.jl")
+include("assemble_interelement_condition.jl")
 
 end

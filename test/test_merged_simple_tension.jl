@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-# using Revise
+using Revise
 using CutCellDG
 include("useful_routines.jl")
 
@@ -35,6 +35,7 @@ mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
 lambda, mu = (1.0, 2.0)
 penalty = 1.0
+eta = 1
 dx = 0.1
 e11 = dx / 2.0
 e22 = -lambda / (lambda + 2mu) * e11
@@ -52,4 +53,13 @@ CutCellDG.assemble_displacement_bilinear_forms!(
     cellquads,
     stiffness,
     mergedmesh,
+)
+CutCellDG.assemble_interelement_condition!(
+    sysmatrix,
+    basis,
+    facequads,
+    stiffness,
+    mergedmesh,
+    penalty,
+    eta,
 )

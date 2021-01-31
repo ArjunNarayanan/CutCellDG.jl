@@ -94,7 +94,19 @@ function dimension(mesh)
     return dimension(background_mesh(mesh))
 end
 
+function face_determinant_jacobian(mesh)
+    return face_determinant_jacobian(background_mesh(mesh))
+end
+
 function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
 
     return NF
+end
+
+function reference_face_normals()
+    n1 = [0.,-1.]
+    n2 = [1.,0.]
+    n3 = [0.,1.]
+    n4 = [-1.,0.]
+    return [n1,n2,n3,n4]
 end
