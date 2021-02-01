@@ -87,7 +87,7 @@ function jacobian(mesh)
 end
 
 function inverse_jacobian(mesh)
-    return jacobian(background_mesh(mesh))
+    return inverse_jacobian(background_mesh(mesh))
 end
 
 function dimension(mesh)
@@ -146,4 +146,17 @@ end
 
 function check_eta(eta)
     @assert eta == +1 || eta == -1 || eta == 0
+end
+
+function rotate_90(normals)
+    rot = [
+        0.0 -1.0
+        1.0 0.0
+    ]
+    return rot * normals
+end
+
+function scale_area(tangents,invjac)
+    den = sqrt.((tangents .^ 2)' * (invjac .^ 2))
+    return 1.0 ./ den
 end

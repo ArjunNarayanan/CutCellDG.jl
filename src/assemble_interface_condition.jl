@@ -11,20 +11,51 @@ function assemble_coherent_interface_condition!(
     check_eta(eta)
     dim = dimension(mesh)
     ncells = number_of_cells(mesh)
+    jac = jacobian(mesh)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
 
     for cellid = 1:ncells
-        cellsign = cell_sign(mesh,cellid)
+        cellsign = cell_sign(mesh, cellid)
         check_cellsign(cellsign)
         if cellsign == 0
-            nodeids1 = nodal_connectivity(mesh,+1,cellid)
-            nodeids2 = nodal_connectivity(mesh,-1,cellid)
+            quad1 = interfacequads[-1, cellid]
+            quad2 = interfacequads[+1, cellid]
 
-            quad1 = interfacequads[+1,cellid]
-            quad2 = interfacequads[-1,cellid]
+            normals = interface_normals(interfacequads, cellid)
+            scaleareas = interface_scale_areas(interfacequads, cellid)
 
-            normals = interface_normals(interfacequads,cellid)
+            top = coherent_traction_operators(
+                basis,
+                quad1,
+                quad2,
+                normals,
+                stiffness[-1],
+                stiffness[+1],
+                dim,
+                scaleareas,
+                jac,
+                vectosymmconverter,
+                eta,
+            )
+            mop = interface_mass_operators(
+                basis,
+                quad1,
+                quad2,
+                dim,
+                penalty * scaleareas,
+            )
 
-            top = coherent_traction_operators(basis,quad1,quad2,normals,)
+            nodeids1 = nodal_connectivity(mesh, -1, cellid)
+            nodeids2 = nodal_connectivity(mesh, +1, cellid)
+
+            assemble_interface_condition!(
+                sysmatrix,
+                nodeids1,
+                nodeids2,
+                dim,
+                top,
+                mop,
+            )
         end
     end
 end

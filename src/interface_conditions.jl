@@ -142,3 +142,63 @@ function interelement_mass_operators(basis,quad1,quad2,dim,scale)
     facescale = repeat([scale],numqp)
     return interface_mass_operators(basis,quad1,quad2,dim,facescale)
 end
+
+function assemble_interface_condition!(
+    sysmatrix,
+    nodeids1,
+    nodeids2,
+    dofspernode,
+    tractionop,
+    massop,
+)
+    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, +tractionop.nn)
+    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, +tractionop.nnT)
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids1,
+        nodeids2,
+        dofspernode,
+        +tractionop.np,
+    )
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids1,
+        nodeids2,
+        dofspernode,
+        -tractionop.pnT,
+    )
+
+    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, -tractionop.pp)
+    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, -tractionop.ppT)
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids2,
+        nodeids1,
+        dofspernode,
+        -tractionop.pn,
+    )
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids2,
+        nodeids1,
+        dofspernode,
+        +tractionop.npT,
+    )
+
+    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, massop.nn)
+    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, massop.pp)
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids1,
+        nodeids2,
+        dofspernode,
+        -massop.np,
+    )
+    assemble_couple_cell_matrix!(
+        sysmatrix,
+        nodeids2,
+        nodeids1,
+        dofspernode,
+        -massop.pn,
+    )
+end

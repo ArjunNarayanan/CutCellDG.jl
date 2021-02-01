@@ -169,7 +169,7 @@ function assemble_cut_cell_boundary_traction_component_operator!(
             normals[faceid],
             stiffness[cellsign],
             dim,
-            detjac[faceid],
+            facedetjac[faceid],
             jac,
             vectosymmconverter,
         ),

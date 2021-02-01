@@ -78,6 +78,7 @@ function assemble_interelement_condition!(
         else
             assemble_cut_cell_interelement_condition!(
                 sysmatrix,
+                basis,
                 facequads,
                 normals,
                 stiffness,
@@ -85,6 +86,7 @@ function assemble_interelement_condition!(
                 +1,
                 cellid,
                 faceids,
+                nbrfaceids,
                 facedetjac,
                 jac,
                 vectosymmconverter,
@@ -93,6 +95,7 @@ function assemble_interelement_condition!(
             )
             assemble_cut_cell_interelement_condition!(
                 sysmatrix,
+                basis,
                 facequads,
                 normals,
                 stiffness,
@@ -100,6 +103,7 @@ function assemble_interelement_condition!(
                 -1,
                 cellid,
                 faceids,
+                nbrfaceids,
                 facedetjac,
                 jac,
                 vectosymmconverter,
@@ -132,7 +136,7 @@ function assemble_uniform_cell_interelement_condition!(
            solution_cell_id(mesh, cellsign, cellid)
 
             nodeids2 = nodal_connectivity(mesh, cellsign, nbrcellid)
-            assemble_face_interelement_condition!(
+            assemble_interface_condition!(
                 sysmatrix,
                 nodeids1,
                 nodeids2,
@@ -146,6 +150,7 @@ end
 
 function assemble_cut_cell_interelement_condition!(
     sysmatrix,
+    basis,
     facequads,
     normals,
     stiffness,
@@ -153,6 +158,7 @@ function assemble_cut_cell_interelement_condition!(
     cellsign,
     cellid,
     faceids,
+    nbrfaceids,
     facedetjac,
     jac,
     vectosymmconverter,
@@ -190,7 +196,7 @@ function assemble_cut_cell_interelement_condition!(
                     dim,
                     penalty * facedetjac[faceid],
                 )
-                assemble_face_interelement_condition!(
+                assemble_interface_condition!(
                     sysmatrix,
                     nodeids1,
                     nodeids2,
@@ -201,64 +207,4 @@ function assemble_cut_cell_interelement_condition!(
             end
         end
     end
-end
-
-function assemble_face_interelement_condition!(
-    sysmatrix,
-    nodeids1,
-    nodeids2,
-    dofspernode,
-    tractionop,
-    massop,
-)
-    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, +tractionop.nn)
-    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, +tractionop.nnT)
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids1,
-        nodeids2,
-        dofspernode,
-        +tractionop.np,
-    )
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids1,
-        nodeids2,
-        dofspernode,
-        -tractionop.pnT,
-    )
-
-    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, -tractionop.pp)
-    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, -tractionop.ppT)
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids2,
-        nodeids1,
-        dofspernode,
-        -tractionop.pn,
-    )
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids2,
-        nodeids1,
-        dofspernode,
-        +tractionop.npT,
-    )
-
-    assemble_cell_matrix!(sysmatrix, nodeids1, dofspernode, massop.nn)
-    assemble_cell_matrix!(sysmatrix, nodeids2, dofspernode, massop.pp)
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids1,
-        nodeids2,
-        dofspernode,
-        -massop.np,
-    )
-    assemble_couple_cell_matrix!(
-        sysmatrix,
-        nodeids2,
-        nodeids1,
-        dofspernode,
-        -massop.pn,
-    )
 end

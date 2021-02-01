@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-# using Revise
+using Revise
 using CutCellDG
 include("useful_routines.jl")
 
@@ -30,5 +30,9 @@ testcelltoquad = [1, 0, 0]
 
 testnormals = repeat(normal,inner=(1,numqp))
 @test allapprox(testnormals,CutCellDG.interface_normals(interfacequads,1))
-
 @test interfacequads[1,1] ≈ interfacequads[-1,1]
+
+testtangents = repeat([0.,1.],inner=(1,numqp))
+testscaleareas = repeat([0.5],numqp)
+@test allapprox(testtangents,CutCellDG.interface_tangents(interfacequads,1))
+@test allapprox(testscaleareas,CutCellDG.interface_scale_areas(interfacequads,1))
