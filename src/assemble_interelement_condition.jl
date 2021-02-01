@@ -8,7 +8,7 @@ function assemble_interelement_condition!(
     eta,
 )
 
-    @assert eta == 1 || eta == 0 || eta == -1
+    check_eta(eta)
     uniformquads = uniform_face_quadratures(facequads)
     normals = reference_face_normals()
     facedetjac = face_determinant_jacobian(mesh)

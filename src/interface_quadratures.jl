@@ -1,9 +1,10 @@
 struct InterfaceQuadratures
     quads::Any
     normals::Any
+    scaleareas
     celltoquad::Any
     ncells::Any
-    function InterfaceQuadratures(quads, normals, celltoquad)
+    function InterfaceQuadratures(quads, normals, scaleareas, celltoquad)
         ncells = length(celltoquad)
         nphase, nquads = size(quads)
 
@@ -12,7 +13,7 @@ struct InterfaceQuadratures
         @assert all(celltoquad .>= 0)
         @assert all(celltoquad .<= nquads)
 
-        new(quads, normals, celltoquad, ncells)
+        new(quads, normals, scaleareas, celltoquad, ncells)
     end
 end
 
@@ -32,6 +33,7 @@ function InterfaceQuadratures(
     numinterfaces = count(hasinterface)
     quads = Matrix(undef, 2, numinterfaces)
     normals = Vector(undef, numinterfaces)
+    scaleareas = Vector(undef, numinterfaces)
     celltoquad = zeros(Int, numcells)
 
     interfacecellids = findall(hasinterface)
@@ -39,19 +41,26 @@ function InterfaceQuadratures(
     for cellid in interfacecellids
         nodeids = nodal_connectivity(background_mesh(cutmesh),cellid)
         update!(levelset, levelsetcoeffs[nodeids])
+        cellmap = cell_map(cutmesh,cellid)
 
         try
             squad = surface_quadrature(levelset, xL, xR, numqp, numsplits = 2)
             n = levelset_normals(levelset, points(squad), invjac)
+            scalearea = scale_area(cellmap,n)
+
             quads[1, counter] = squad
             quads[2, counter] = squad
             normals[counter] = n
+            scaleareas[counter] = scalearea
         catch e
             squad = surface_quadrature(levelset,xL,xR,numqp,numsplits = 3)
             n = levelset_normals(levelset, points(squad), invjac)
+            scalearea = scale_area(cellmap,n)
+
             quads[1, counter] = squad
             quads[2, counter] = squad
             normals[counter] = n
+            scaleareas[counter] = scalearea
         end
 
         celltoquad[cellid] = counter
@@ -78,6 +87,12 @@ function interface_normals(iquads::InterfaceQuadratures, cellid)
     idx = iquads.celltoquad[cellid]
     idx > 0 || error("Cell $cellid does not have an interface quadrature rule")
     return iquads.normals[idx]
+end
+
+function interface_scale_area(iquads::InterfaceQuadratures, cellid)
+    idx = iquads.celltoquad[cellid]
+    idx > 0 || error("Cell $cellid does not have an interface quadrature rule")
+    return iquads.scaleareas[idx]
 end
 
 function update_interface_quadrature!(interfacequads::InterfaceQuadratures, s, cellid, quad)

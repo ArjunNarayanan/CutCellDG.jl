@@ -143,3 +143,7 @@ end
 function check_cellsign(cellsign)
     @assert cellsign == +1 || cellsign == -1 || cellsign == 0
 end
+
+function check_eta(eta)
+    @assert eta == +1 || eta == -1 || eta == 0
+end
