@@ -68,6 +68,53 @@ function mass_matrix(basis, quad1, quad2, ndofs, facescale)
     return matrix
 end
 
+function surface_traction_component_operator(
+    basis,
+    quad1,
+    quad2,
+    components,
+    normals,
+    stiffness,
+    dim,
+    scalearea,
+    jac,
+    vectosymmconverter,
+)
+    numqp = length(quad1)
+    @assert length(quad2) ==
+            size(normals)[2] ==
+            length(scalearea) ==
+            size(components)[2] ==
+            numqp
+    @assert size(normals)[1] == dim
+
+    nf = number_of_basis_functions(basis)
+    totalndofs = dim * nf
+    matrix = zeros(totalndofs, totalndofs)
+
+    for qpidx = 1:numqp
+        p1,w1 = quad1[qpidx]
+        p2,w2 = quad2[qpidx]
+        @assert w1 ≈ w2
+
+        vals = basis(p1)
+        grad = transform_gradient(gradient(basis,p2),jac)
+
+        normal = normals[:, qpidx]
+        component = components[:, qpidx]
+        projector = component * component'
+
+        NK = sum([
+            make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim
+        ])
+        N = sum([normal[k] * vectosymmconverter[k]' for k = 1:dim])
+        NI = interpolation_matrix(vals, dim)
+
+        matrix .+= NI' * projector * N * stiffness * NK * scalearea[qpidx] * w1
+    end
+
+end
+
 function surface_traction_operator(
     basis,
     quad1,
