@@ -58,6 +58,10 @@ function cell_map(cutmesh::CutMesh,cellid)
     return cell_map(background_mesh(cutmesh),cellid)
 end
 
+function cell_map(cutmesh::CutMesh,cellsign,cellid)
+    return cell_map(cutmesh,cellid)
+end
+
 function solution_cell_id(cutmesh::CutMesh,s,cellid)
     return cellid
 end

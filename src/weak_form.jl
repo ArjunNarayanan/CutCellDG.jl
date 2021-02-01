@@ -106,3 +106,15 @@ function surface_traction_operator(
     end
     return matrix
 end
+
+function linear_form(rhsfunc, basis, quad, cellmap, ndofs, detjac)
+    nf = number_of_basis_functions(basis)
+    rhs = zeros(ndofs * nf)
+    for (p, w) in quad
+        vals = rhsfunc(cellmap(p))
+        @assert length(vals) == ndofs
+        N = interpolation_matrix(basis(p), ndofs)
+        rhs .+= N' * vals * detjac * w
+    end
+    return rhs
+end

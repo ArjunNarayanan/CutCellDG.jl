@@ -57,7 +57,17 @@ CutCellDG.assemble_interelement_condition!(
     penalty,
     eta,
 )
-
+CutCellDG.assemble_penalty_displacement_bc!(
+    sysmatrix,
+    sysrhs,
+    x -> [dx,0.0],
+    basis,
+    facequads,
+    stiffness,
+    cutmesh,
+    x->x[1] ≈ 0.0,
+    penalty,
+)
 # CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, leftbc, cutmesh)
 # CutCellDG.assemble_penalty_displacement_bc!(
 #     sysmatrix,
@@ -67,10 +77,10 @@ CutCellDG.assemble_interelement_condition!(
 # )
 # CutCellDG.assemble_penalty_displacement_bc!(sysmatrix, sysrhs, rightbc, cutmesh)
 
-op = CutCellDG.sparse_displacement_operator(sysmatrix, cutmesh)
-rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
-
-K = Array(op)
+# op = CutCellDG.sparse_displacement_operator(sysmatrix, cutmesh)
+# rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
+#
+# K = Array(op)
 
 # sol = op \ rhs
 # disp = reshape(sol, 2, :)
