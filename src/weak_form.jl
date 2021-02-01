@@ -68,6 +68,39 @@ function mass_matrix(basis, quad1, quad2, ndofs, facescale)
     return matrix
 end
 
+function component_mass_matrix(
+    basis,
+    quad1,
+    quad2,
+    components,
+    ndofs,
+    facescale,
+)
+    numqp = length(quad1)
+    @assert length(quad2) == length(facescale) == numqp
+    @assert size(components) == (ndofs, numqp)
+    nf = number_of_basis_functions(basis)
+    totaldofs = ndofs * nf
+    matrix = zeros(totaldofs, totaldofs)
+    for qpidx = 1:numqp
+        p1, w1 = quad1[qpidx]
+        p2, w2 = quad2[qpidx]
+        @assert w1 ≈ w2
+
+        component = components[:, qpidx]
+        projector = component * component'
+
+        vals1 = basis(p1)
+        vals2 = basis(p2)
+
+        NI1 = interpolation_matrix(vals1, ndofs)
+        NI2 = make_row_matrix(projector, vals2)
+
+        matrix .+= NI1' * NI2 * facescale[qpidx] * w1
+    end
+    return matrix
+end
+
 function surface_traction_component_operator(
     basis,
     quad1,
@@ -86,19 +119,19 @@ function surface_traction_component_operator(
             length(scalearea) ==
             size(components)[2] ==
             numqp
-    @assert size(normals)[1] == dim
+    @assert size(normals)[1] == size(components)[1] == dim
 
     nf = number_of_basis_functions(basis)
     totalndofs = dim * nf
     matrix = zeros(totalndofs, totalndofs)
 
     for qpidx = 1:numqp
-        p1,w1 = quad1[qpidx]
-        p2,w2 = quad2[qpidx]
+        p1, w1 = quad1[qpidx]
+        p2, w2 = quad2[qpidx]
         @assert w1 ≈ w2
 
         vals = basis(p1)
-        grad = transform_gradient(gradient(basis,p2),jac)
+        grad = transform_gradient(gradient(basis, p2), jac)
 
         normal = normals[:, qpidx]
         component = components[:, qpidx]
@@ -112,7 +145,7 @@ function surface_traction_component_operator(
 
         matrix .+= NI' * projector * N * stiffness * NK * scalearea[qpidx] * w1
     end
-
+    return matrix
 end
 
 function surface_traction_operator(
@@ -162,6 +195,26 @@ function linear_form(rhsfunc, basis, quad, cellmap, ndofs, detjac)
         @assert length(vals) == ndofs
         N = interpolation_matrix(basis(p), ndofs)
         rhs .+= N' * vals * detjac * w
+    end
+    return rhs
+end
+
+function component_linear_form(
+    rhsfunc,
+    basis,
+    quad,
+    component,
+    cellmap,
+    ndofs,
+    detjac,
+)
+    @assert length(component) == ndofs
+    nf = number_of_basis_functions(basis)
+    rhs = zeros(ndofs * nf)
+    for (p, w) in quad
+        vals = rhsfunc(cellmap(p))
+        N = interpolation_matrix(basis(p), ndofs)
+        rhs .+= vals * N' * component * detjac * w
     end
     return rhs
 end

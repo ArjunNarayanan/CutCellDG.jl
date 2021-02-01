@@ -12,7 +12,7 @@ function boundary_traction_operator(
     numqp = length(quad)
     normals = repeat(normal, inner = (1, numqp))
     scalearea = repeat([facedetjac], numqp)
-    return surface_traction_operator(
+    return -1.0*urface_traction_operator(
         basis,
         quad,
         quad,

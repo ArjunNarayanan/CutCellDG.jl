@@ -78,6 +78,10 @@ function nodal_connectivity(cutmesh::CutMesh, s, cellid)
     return nodeids
 end
 
+function nodal_coordinates(cutmesh::CutMesh)
+    return nodal_coordinates(background_mesh(cutmesh))
+end
+
 function cell_sign!(mesh, levelset, levelsetcoeffs, tol, perturbation)
     ncells = number_of_cells(mesh)
     cellsign = zeros(Int, ncells)

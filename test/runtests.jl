@@ -35,3 +35,7 @@ end
 @safetestset "Test Assembly" begin
     include("test_assembly.jl")
 end
+
+@safetestset "Test Simple Tension" begin
+    include("test_simple_tension.jl")
+end
