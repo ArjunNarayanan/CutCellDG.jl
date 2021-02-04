@@ -62,7 +62,7 @@ interfacequads =
     CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
 
-mergedwithcell = CutCellDG.merge_tiny_cells_in_mesh!(
+mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
     cutmesh,
     cellquads,
     facequads,
@@ -70,3 +70,4 @@ mergedwithcell = CutCellDG.merge_tiny_cells_in_mesh!(
 )
 mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 @test CutCellDG.number_of_nodes(mergedmesh) == 8
+@test hasmergedcells

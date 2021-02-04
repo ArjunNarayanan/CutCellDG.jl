@@ -33,3 +33,58 @@ end
 function required_quadrature_order(polyorder)
     ceil(Int, 0.5 * (2polyorder + 1))
 end
+
+function add_cell_error_squared!(
+    err,
+    interpolater,
+    exactsolution,
+    cellmap,
+    quad,
+)
+    detjac = CutCellDG.determinant_jacobian(cellmap)
+    for (p, w) in quad
+        numsol = interpolater(p)
+        exsol = exactsolution(cellmap(p))
+        err .+= (numsol - exsol) .^ 2 * detjac * w
+    end
+end
+
+function mesh_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
+    ndofs = size(nodalsolutions)[1]
+    err = zeros(ndofs)
+    interpolater = InterpolatingPolynomial(ndofs, basis)
+    ncells = CutCellDG.number_of_cells(mesh)
+    for cellid = 1:ncells
+        cellsign = CutCellDG.cell_sign(mesh, cellid)
+        CutCellDG.check_cellsign(cellsign)
+        if cellsign == +1 || cellsign == 0
+            cellmap = CutCellDG.cell_map(mesh, +1, cellid)
+            nodeids = CutCellDG.nodal_connectivity(mesh, +1, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
+            quad = cellquads[+1, cellid]
+            add_cell_error_squared!(
+                err,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+            )
+        end
+        if cellsign == -1 || cellsign == 0
+            cellmap = CutCellDG.cell_map(mesh, -1, cellid)
+            nodeids = CutCellDG.nodal_connectivity(mesh, -1, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
+            quad = cellquads[-1, cellid]
+            add_cell_error_squared!(
+                err,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+            )
+        end
+    end
+    return sqrt.(err)
+end

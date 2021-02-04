@@ -253,6 +253,7 @@ function merge_tiny_cells_in_mesh!(
     quadareas = quadrature_areas(cellquads, cutmesh)
     tinyarea = tinyratio * sum(weights(uniform_cell_quadrature(cellquads)))
     istinycell = is_tiny_cell(cutmesh, quadareas, tinyarea)
+    hasmergedcells = reduce(|,istinycell)
     nfaces = number_of_faces_per_cell(facequads)
 
     for cellid = 1:ncells
@@ -260,6 +261,7 @@ function merge_tiny_cells_in_mesh!(
         if s == +1 || s == 0
             row = cell_sign_to_row(+1)
             if istinycell[row, cellid]
+                hasmergedcells = true
                 merge_cell_with_suitable_neighbor!(
                     mergedwithcell,
                     cellquads,
@@ -292,7 +294,7 @@ function merge_tiny_cells_in_mesh!(
             end
         end
     end
-    return mergedwithcell
+    return mergedwithcell,hasmergedcells
 end
 
 function background_mesh(mergedmesh::MergedMesh)

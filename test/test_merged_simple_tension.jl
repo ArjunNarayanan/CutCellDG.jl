@@ -9,14 +9,15 @@ polyorder = 1
 numqp = 2
 
 widths = [2.,1.]
-nelmts = [2,1]
+nelmts = [5,5]
 
 basis = TensorProductBasis(2, polyorder)
 levelset = InterpolatingPolynomial(1, basis)
 mesh = CutCellDG.DGMesh([0.0, 0.0], widths, nelmts, basis)
 
-normal = [1.0, 0.0]
-x0 = [1.1, 0.0]
+interfaceangle = 40.
+normal = [cosd(interfaceangle), sind(interfaceangle)]
+x0 = [1.8, 0.0]
 levelsetcoeffs = CutCellDG.levelset_coefficients(
     x -> plane_distance_function(x, normal, x0),
     mesh,
@@ -28,12 +29,13 @@ interfacequads =
     CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
 
-mergedwithcell = CutCellDG.merge_tiny_cells_in_mesh!(
+mergedwithcell,hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
     cutmesh,
     cellquads,
     facequads,
     interfacequads,
 )
+@assert hasmergedcells
 mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
 lambda, mu = (1.0, 2.0)
@@ -119,13 +121,10 @@ rhs = CutCellDG.displacement_rhs_vector(sysrhs,mergedmesh)
 solution = matrix\rhs
 displacement = reshape(solution,2,:)
 
-nodeids = vcat(CutCellDG.nodal_connectivity(mergedmesh,-1,1),
-               CutCellDG.nodal_connectivity(mergedmesh,+1,2))
-nodalcoordinates = CutCellDG.nodal_coordinates(mergedmesh.cutmesh)
-nodalcoordinates = nodalcoordinates[:,nodeids]
+function exact_displacement(x,e11,e22)
+    return [x[1]*e11,x[2]*e22]
+end
 
-testdisp = copy(nodalcoordinates)
-testdisp[1, :] .*= e11
-testdisp[2, :] .*= e22
+err = mesh_L2_error(displacement,x->exact_displacement(x,e11,e22),basis,cellquads,mergedmesh)
 
-@test allapprox(displacement, testdisp, 1e2eps())
+@test allapprox(err,zeros(2),1e2eps())
