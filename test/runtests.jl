@@ -38,9 +38,11 @@ end
 
 @safetestset "Test Simple Tension" begin
     include("test_simple_tension.jl")
-end
-
-@safetestset "Test Simple Tension" begin
     include("test_cut_simple_tension.jl")
     include("test_merged_simple_tension.jl")
+end
+
+@safetestset "Test Coherent Interface Convergence" begin
+    include("test_vertical_plane_interface_convergence.jl")
+    include("test_inclined_plane_interface_convergence.jl")
 end

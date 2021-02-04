@@ -88,3 +88,7 @@ function mesh_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
     end
     return sqrt.(err)
 end
+
+function convergence_rate(dx, err)
+    return diff(log.(err)) ./ diff(log.(dx))
+end

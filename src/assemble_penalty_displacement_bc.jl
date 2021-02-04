@@ -12,7 +12,7 @@ function boundary_traction_operator(
     numqp = length(quad)
     normals = repeat(normal, inner = (1, numqp))
     scalearea = repeat([facedetjac], numqp)
-    return -1.0*urface_traction_operator(
+    return -1.0 * surface_traction_operator(
         basis,
         quad,
         quad,
@@ -59,7 +59,7 @@ function assemble_boundary_traction_operator!(
             ),
         ) for (q, n, d) in zip(uniformquads, normals, facedetjac)
     ]
-    uniformtop1 = [
+    uniformtop2 = [
         vec(
             boundary_traction_operator(
                 basis,
@@ -73,32 +73,30 @@ function assemble_boundary_traction_operator!(
             ),
         ) for (q, n, d) in zip(uniformquads, normals, facedetjac)
     ]
+    uniformtop = [uniformtop1, uniformtop2]
 
     ncells = number_of_cells(mesh)
 
     for cellid = 1:ncells
         cellsign = cell_sign(mesh, cellid)
-        cellmap = cell_map(mesh, cellsign, cellid)
+        cellmap1 = cell_map(mesh, +1, cellid)
+        cellmap2 = cell_map(mesh, -1, cellid)
+
         check_cellsign(cellsign)
         for faceid in faceids
-            if cell_connectivity(mesh, faceid, cellid) == 0 &&
-               onboundary(cellmap(facemidpoints[faceid]))
+            if cell_connectivity(mesh, faceid, cellid) == 0 && (
+                onboundary(cellmap1(facemidpoints[faceid])) ||
+                onboundary(cellmap2(facemidpoints[faceid]))
+            )
 
-                if cellsign == +1
-                    nodeids = nodal_connectivity(mesh, +1, cellid)
+                if cellsign == +1 || cellsign == -1
+                    row = cell_sign_to_row(cellsign)
+                    nodeids = nodal_connectivity(mesh, cellsign, cellid)
                     assemble_cell_matrix!(
                         sysmatrix,
                         nodeids,
                         dim,
-                        uniformtop1[faceid],
-                    )
-                elseif cellsign == -1
-                    nodeids = nodal_connectivity(mesh, -1, cellid)
-                    assemble_cell_matrix!(
-                        sysmatrix,
-                        nodeids,
-                        dim,
-                        uniformtop2[faceid],
+                        uniformtop[row][faceid],
                     )
                 else
                     assemble_cut_cell_boundary_traction_operator!(
@@ -159,7 +157,7 @@ function assemble_cut_cell_boundary_traction_operator!(
             normals[faceid],
             stiffness[cellsign],
             dim,
-            detjac[faceid],
+            facedetjac[faceid],
             jac,
             vectosymmconverter,
         ),
@@ -200,11 +198,15 @@ function assemble_boundary_mass_operator!(
 
     for cellid = 1:ncells
         cellsign = cell_sign(mesh, cellid)
-        cellmap = cell_map(mesh, cellsign, cellid)
+        cellmap1 = cell_map(mesh, +1, cellid)
+        cellmap2 = cell_map(mesh, -1, cellid)
+
         check_cellsign(cellsign)
         for faceid in faceids
-            if cell_connectivity(mesh, faceid, cellid) == 0 &&
-               onboundary(cellmap(facemidpoints[faceid]))
+            if cell_connectivity(mesh, faceid, cellid) == 0 && (
+                onboundary(cellmap1(facemidpoints[faceid])) ||
+                onboundary(cellmap2(facemidpoints[faceid]))
+            )
 
                 if cellsign == +1 || cellsign == -1
                     nodeids = nodal_connectivity(mesh, cellsign, cellid)
@@ -286,11 +288,17 @@ function assemble_boundary_displacement_rhs!(
 
     for cellid = 1:ncells
         cellsign = cell_sign(mesh, cellid)
-        cellmap = cell_map(mesh, cellsign, cellid)
+        cellmap1 = cell_map(mesh, +1, cellid)
+        cellmap2 = cell_map(mesh, -1, cellid)
+
+
         check_cellsign(cellsign)
         for faceid in faceids
-            if cell_connectivity(mesh, faceid, cellid) == 0 &&
-               onboundary(cellmap(facemidpoints[faceid]))
+            if cell_connectivity(mesh, faceid, cellid) == 0 && (
+                onboundary(cellmap1(facemidpoints[faceid])) ||
+                onboundary(cellmap2(facemidpoints[faceid]))
+            )
+
                 if cellsign == +1 || cellsign == 0
                     assemble_face_boundary_displacement_rhs!(
                         sysrhs,
