@@ -1,16 +1,19 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-# using Revise
+using Revise
 using CutCellDG
 include("useful_routines.jl")
 
 polyorder = 1
 numqp = 2
 
+widths = [2.,1.]
+nelmts = [2,1]
+
 basis = TensorProductBasis(2, polyorder)
 levelset = InterpolatingPolynomial(1, basis)
-mesh = CutCellDG.DGMesh([0.0, 0.0], [2.0, 1.0], [2, 1], basis)
+mesh = CutCellDG.DGMesh([0.0, 0.0], widths, nelmts, basis)
 
 normal = [1.0, 0.0]
 x0 = [1.1, 0.0]
@@ -63,6 +66,66 @@ CutCellDG.assemble_interelement_condition!(
     penalty,
     eta,
 )
+CutCellDG.assemble_coherent_interface_condition!(
+    sysmatrix,
+    basis,
+    interfacequads,
+    stiffness,
+    mergedmesh,
+    penalty,
+    eta,
+)
+CutCellDG.assemble_penalty_displacement_component_bc!(
+    sysmatrix,
+    sysrhs,
+    x -> 0.0,
+    basis,
+    facequads,
+    stiffness,
+    mergedmesh,
+    x -> x[1] ≈ 0.0,
+    [1.0, 0.0],
+    penalty,
+)
+CutCellDG.assemble_penalty_displacement_component_bc!(
+    sysmatrix,
+    sysrhs,
+    x -> 0.0,
+    basis,
+    facequads,
+    stiffness,
+    mergedmesh,
+    x -> x[2] ≈ 0.0,
+    [0.0, 1.0],
+    penalty,
+)
+CutCellDG.assemble_penalty_displacement_component_bc!(
+    sysmatrix,
+    sysrhs,
+    x -> dx,
+    basis,
+    facequads,
+    stiffness,
+    mergedmesh,
+    x -> x[1] ≈ widths[1],
+    [1.0, 0.0],
+    penalty,
+)
 
-matrix = CutCellDG.sparse_displacement_operator(sysmatrix,mergedmesh)
-K = Array(matrix)
+
+matrix = CutCellDG.sparse_displacement_operator(sysmatrix, mergedmesh)
+rhs = CutCellDG.displacement_rhs_vector(sysrhs,mergedmesh)
+
+solution = matrix\rhs
+displacement = reshape(solution,2,:)
+
+nodeids = vcat(CutCellDG.nodal_connectivity(mergedmesh,-1,1),
+               CutCellDG.nodal_connectivity(mergedmesh,+1,2))
+nodalcoordinates = CutCellDG.nodal_coordinates(mergedmesh.cutmesh)
+nodalcoordinates = nodalcoordinates[:,nodeids]
+
+testdisp = copy(nodalcoordinates)
+testdisp[1, :] .*= e11
+testdisp[2, :] .*= e22
+
+@test allapprox(displacement, testdisp, 1e2eps())

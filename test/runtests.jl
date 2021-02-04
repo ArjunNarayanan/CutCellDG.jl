@@ -39,3 +39,8 @@ end
 @safetestset "Test Simple Tension" begin
     include("test_simple_tension.jl")
 end
+
+@safetestset "Test Simple Tension" begin
+    include("test_cut_simple_tension.jl")
+    include("test_merged_simple_tension.jl")
+end
