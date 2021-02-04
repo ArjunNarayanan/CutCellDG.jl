@@ -1,5 +1,4 @@
 using Test
-using LinearAlgebra
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise

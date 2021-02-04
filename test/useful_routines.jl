@@ -26,6 +26,31 @@ function plane_distance_function(coords, normal, x0)
     return (coords .- x0)' * normal
 end
 
+function circle_distance_function(coords, center, radius)
+    difference = (coords .- center) .^ 2
+    distance = radius .- sqrt.(vec(mapslices(sum, difference, dims = 1)))
+    return distance
+end
+
+function corner_distance_function(x::V, xc) where {V<:AbstractVector}
+    v = xc - x
+    if all(x .<= xc)
+        minimum(v)
+    elseif all(x .> xc)
+        return -sqrt(v' * v)
+    elseif x[2] > xc[2]
+        return v[2]
+    else
+        return v[1]
+    end
+end
+
+function corner_distance_function(points::M, xc) where {M<:AbstractMatrix}
+    return vec(
+        mapslices(x -> corner_distance_function(x, xc), points, dims = 1),
+    )
+end
+
 function ≈(q1::QuadratureRule, q2::QuadratureRule)
     flag = allapprox(q1.points, q2.points) && allapprox(q1.weights, q2.weights)
 end

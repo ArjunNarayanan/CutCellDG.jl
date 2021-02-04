@@ -23,9 +23,9 @@ function onboundary(x, L, W)
     return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
 end
 
-function error_for_plane_interface(
-    x0,
-    normal,
+function error_for_curved_interface(
+    xc,
+    radius,
     nelmts,
     polyorder,
     numqp,
@@ -44,7 +44,7 @@ function error_for_plane_interface(
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
     levelset = InterpolatingPolynomial(1, basis)
     levelsetcoeffs = CutCellDG.levelset_coefficients(
-        x -> plane_distance_function(x, normal, x0),
+        x -> circle_distance_function(x, xc, radius),
         mesh,
     )
 
@@ -62,6 +62,7 @@ function error_for_plane_interface(
         facequads,
         interfacequads,
     )
+    # @assert hasmergedcells
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
     sysmatrix = CutCellDG.SystemMatrix()
@@ -127,56 +128,20 @@ function error_for_plane_interface(
 end
 
 
-
-x0 = [0.5, 0.0]
-normal = [1.0, 0.0]
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-polyorder = 1
-numqp = required_quadrature_order(polyorder)
-penaltyfactor = 1e2
-eta = 1
-
-err = [
-    error_for_plane_interface(
-        x0,
-        normal,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-        eta,
-    ) for ne in nelmts
-]
-
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
-
-dx = 1.0 ./ nelmts
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
-
-@test allapprox(u1rate, repeat([2.0], length(u1rate)), 0.1)
-@test allapprox(u1rate, repeat([2.0], length(u2rate)), 0.1)
-
-
-
-
-
-
-x0 = [0.5, 0.0]
-normal = [1.0, 0.0]
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
+xc = [0.5, 0.5]
+radius = 1.0
 polyorder = 2
-numqp = required_quadrature_order(polyorder)
 penaltyfactor = 1e2
+powers = [3, 4, 5]
+nelmts = [2^p + 1 for p in powers]
+numqp = required_quadrature_order(polyorder) + 2
+nelmts = [2^p + 1 for p in powers]
 eta = 1
 
 err = [
-    error_for_plane_interface(
-        x0,
-        normal,
+    error_for_curved_interface(
+        xc,
+        radius,
         ne,
         polyorder,
         numqp,
@@ -184,13 +149,15 @@ err = [
         eta,
     ) for ne in nelmts
 ]
-
 u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
-
 dx = 1.0 ./ nelmts
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
 
-@test allapprox(u1rate, repeat([3.0], length(u1rate)), 0.05)
-@test allapprox(u1rate, repeat([3.0], length(u2rate)), 0.05)
+u1rate = diff(log.(u1err)) ./ diff(log.(dx))
+u2rate = diff(log.(u2err)) ./ diff(log.(dx))
+
+println("U1 rate = $u1rate")
+println("U2 rate = $u2rate")
+
+# @test allapprox(u1rate,repeat([3.0],length(u1rate)),0.05)
+# @test allapprox(u2rate,repeat([3.0],length(u2rate)),0.05)
