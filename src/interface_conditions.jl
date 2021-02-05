@@ -83,6 +83,73 @@ function coherent_traction_operators(
     return InterfaceTractionOperatorValues(nntop, nptop, pntop, pptop, eta)
 end
 
+function component_traction_operators(
+    basis,
+    quad1,
+    quad2,
+    components,
+    normals,
+    stiffness1,
+    stiffness2,
+    dim,
+    scalearea,
+    jac,
+    vectosymmconverter,
+    eta,
+)
+
+    nntop = surface_traction_component_operator(
+        basis,
+        quad1,
+        quad1,
+        components,
+        normals,
+        stiffness1,
+        dim,
+        scalearea,
+        jac,
+        vectosymmconverter,
+    )
+    nptop = surface_traction_component_operator(
+        basis,
+        quad1,
+        quad2,
+        components,
+        normals,
+        stiffness2,
+        dim,
+        scalearea,
+        jac,
+        vectosymmconverter,
+    )
+    pntop = surface_traction_component_operator(
+        basis,
+        quad2,
+        quad1,
+        components,
+        normals,
+        stiffness1,
+        dim,
+        scalearea,
+        jac,
+        vectosymmconverter,
+    )
+    pptop = surface_traction_component_operator(
+        basis,
+        quad2,
+        quad2,
+        components,
+        normals,
+        stiffness2,
+        dim,
+        scalearea,
+        jac,
+        vectosymmconverter,
+    )
+
+    return InterfaceTractionOperatorValues(nntop, nptop, pntop, pptop, eta)
+end
+
 function interelement_traction_operators(
     basis,
     quad1,
@@ -128,7 +195,7 @@ struct InterfaceMassOperatorValues
     end
 end
 
-function interface_mass_operators(basis, quad1, quad2, dim, facescale)
+function coherent_mass_operators(basis, quad1, quad2, dim, facescale)
     nn = mass_matrix(basis, quad1, quad1, dim, facescale)
     np = mass_matrix(basis, quad1, quad2, dim, facescale)
     pn = mass_matrix(basis, quad2, quad1, dim, facescale)
@@ -137,10 +204,26 @@ function interface_mass_operators(basis, quad1, quad2, dim, facescale)
     return InterfaceMassOperatorValues(nn, np, pn, pp)
 end
 
-function interelement_mass_operators(basis,quad1,quad2,dim,scale)
+function component_mass_operators(
+    basis,
+    quad1,
+    quad2,
+    components,
+    dim,
+    facescale,
+)
+    nn = component_mass_matrix(basis, quad1, quad1, components, dim, facescale)
+    np = component_mass_matrix(basis, quad1, quad2, components, dim, facescale)
+    pn = component_mass_matrix(basis, quad2, quad1, components, dim, facescale)
+    pp = component_mass_matrix(basis, quad2, quad2, components, dim, facescale)
+
+    return InterfaceMassOperatorValues(nn, np, pn, pp)
+end
+
+function interelement_mass_operators(basis, quad1, quad2, dim, scale)
     numqp = length(quad1)
-    facescale = repeat([scale],numqp)
-    return interface_mass_operators(basis,quad1,quad2,dim,facescale)
+    facescale = repeat([scale], numqp)
+    return coherent_mass_operators(basis, quad1, quad2, dim, facescale)
 end
 
 function assemble_interface_condition!(
