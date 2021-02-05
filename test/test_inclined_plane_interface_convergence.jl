@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
 include("useful_routines.jl")
 
@@ -158,9 +158,8 @@ dx = 1.0 ./ nelmts
 u1rate = convergence_rate(dx,u1err)
 u2rate = convergence_rate(dx,u2err)
 
-@test allapprox(u1rate, repeat([2.0], length(u1rate)), 0.1)
-@test allapprox(u1rate, repeat([2.0], length(u2rate)), 0.1)
-
+@test all(u1rate .> 1.95)
+@test all(u2rate .> 1.95)
 
 
 
@@ -196,5 +195,5 @@ dx = 1.0 ./ nelmts
 u1rate = convergence_rate(dx,u1err)
 u2rate = convergence_rate(dx,u2err)
 
-@test all(u1rate .> 3.0)
-@test all(u2rate .> 3.0)
+@test all(u1rate .> 2.95)
+@test all(u2rate .> 2.95)

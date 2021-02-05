@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
 include("useful_routines.jl")
 
@@ -156,8 +156,41 @@ dx = 1.0 ./ nelmts
 u1rate = diff(log.(u1err)) ./ diff(log.(dx))
 u2rate = diff(log.(u2err)) ./ diff(log.(dx))
 
-println("U1 rate = $u1rate")
-println("U2 rate = $u2rate")
+@test allapprox(u1rate,repeat([3.0],length(u1rate)),0.05)
+@test allapprox(u2rate,repeat([3.0],length(u2rate)),0.05)
 
-# @test allapprox(u1rate,repeat([3.0],length(u1rate)),0.05)
-# @test allapprox(u2rate,repeat([3.0],length(u2rate)),0.05)
+
+
+
+
+
+xc = [0.3, 0.7]
+radius = 0.2
+polyorder = 2
+penaltyfactor = 1e2
+powers = [3, 4, 5]
+nelmts = [2^p + 1 for p in powers]
+numqp = required_quadrature_order(polyorder) + 2
+nelmts = [2^p + 1 for p in powers]
+eta = 1
+
+err = [
+    error_for_curved_interface(
+        xc,
+        radius,
+        ne,
+        polyorder,
+        numqp,
+        penaltyfactor,
+        eta,
+    ) for ne in nelmts
+]
+u1err = [er[1] for er in err]
+u2err = [er[2] for er in err]
+dx = 1.0 ./ nelmts
+
+u1rate = diff(log.(u1err)) ./ diff(log.(dx))
+u2rate = diff(log.(u2err)) ./ diff(log.(dx))
+
+@test all(u1rate .> 2.95)
+@test all(u2rate .> 2.95)

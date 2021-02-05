@@ -45,4 +45,5 @@ end
 @safetestset "Test Coherent Interface Convergence" begin
     include("test_vertical_plane_interface_convergence.jl")
     include("test_inclined_plane_interface_convergence.jl")
+    include("test_curved_interface_convergence.jl")
 end
