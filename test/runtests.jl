@@ -47,3 +47,8 @@ end
     include("test_inclined_plane_interface_convergence.jl")
     include("test_curved_interface_convergence.jl")
 end
+
+@safetestset "Test Traction BC Convergence" begin
+    include("test_displacement_and_traction_bc_convergence.jl")
+    include("test_mixed_bc_convergence.jl")
+end

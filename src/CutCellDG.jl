@@ -26,5 +26,7 @@ include("assemble_interface_condition.jl")
 include("assemble_penalty_displacement_bc.jl")
 include("assemble_penalty_displacement_component_bc.jl")
 include("assemble_body_force.jl")
+include("assemble_traction_force_linear_form.jl")
+include("assemble_traction_force_component_linear_form.jl")
 
 end
