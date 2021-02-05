@@ -62,7 +62,7 @@ function error_for_curved_interface(
         facequads,
         interfacequads,
     )
-    # @assert hasmergedcells
+    @assert hasmergedcells
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
     sysmatrix = CutCellDG.SystemMatrix()
@@ -128,8 +128,8 @@ function error_for_curved_interface(
 end
 
 
-xc = [0.5, 0.5]
-radius = 1.0
+xc = [1.0, 0.5]
+radius = 0.45
 polyorder = 2
 penaltyfactor = 1e2
 powers = [3, 4, 5]

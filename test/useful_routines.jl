@@ -114,6 +114,52 @@ function mesh_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
     return sqrt.(err)
 end
 
+function cellwise_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
+
+    ndofs = size(nodalsolutions)[1]
+    interpolater = InterpolatingPolynomial(ndofs, basis)
+    ncells = CutCellDG.number_of_cells(mesh)
+    err = zeros(ndofs,2,ncells)
+
+    for cellid = 1:ncells
+        cellsign = CutCellDG.cell_sign(mesh, cellid)
+        CutCellDG.check_cellsign(cellsign)
+        if cellsign == +1 || cellsign == 0
+            cellmap = CutCellDG.cell_map(mesh, +1, cellid)
+            nodeids = CutCellDG.nodal_connectivity(mesh, +1, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
+            quad = cellquads[+1, cellid]
+            cellerr = zeros(ndofs)
+            add_cell_error_squared!(
+                cellerr,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+            )
+            err[:,1,cellid] = cellerr
+        end
+        if cellsign == -1 || cellsign == 0
+            cellmap = CutCellDG.cell_map(mesh, -1, cellid)
+            nodeids = CutCellDG.nodal_connectivity(mesh, -1, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
+            quad = cellquads[-1, cellid]
+            cellerr = zeros(ndofs)
+            add_cell_error_squared!(
+                cellerr,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+            )
+            err[:,2,cellid] = cellerr
+        end
+    end
+    return sqrt.(err)
+end
+
 function convergence_rate(dx, err)
     return diff(log.(err)) ./ diff(log.(dx))
 end

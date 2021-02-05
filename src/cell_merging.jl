@@ -175,6 +175,7 @@ function merge_cell_with_suitable_neighbor!(
     facequads,
     interfacequads,
     cutmesh,
+    quadareas,
     istinycell,
     cellsign,
     cellid,
@@ -184,19 +185,17 @@ function merge_cell_with_suitable_neighbor!(
     row = cell_sign_to_row(cellsign)
 
     nbrcellids = cell_connectivity(background_mesh(cutmesh), :, cellid)
-    nbrcellsign =
-        [nbrid == 0 ? 2 : cell_sign(cutmesh, nbrid) for nbrid in nbrcellids]
-    nbrislarge =
-        [nbrid == 0 ? false : !istinycell[row, nbrid] for nbrid in nbrcellids]
-    nbr_has_same_phase = [ns == 0 || ns == cellsign for ns in nbrcellsign]
+    nbrareas = [nbrid == 0 ? 0.0 : quadareas[row,nbrid] for nbrid in nbrcellids]
 
-    faceid = findfirst(nbr_has_same_phase .& nbrislarge)
-
-    !isnothing(faceid) || error(
-        "Could not find appropriate merge direction for cell $cellid, cellsign $cellsign",
-    )
-    oppositeface = opposite_face(faceid)
+    faceid = argmax(nbrareas)
     mergecellid = nbrcellids[faceid]
+    oppositeface = opposite_face(faceid)
+
+    # Check that the neighbor is not a tiny cell
+    @assert !istinycell[row,mergecellid] "Attempted to merge with a tiny cell"
+    # Check that the neighbor has same phase
+    nbrcellsign = cell_sign(cutmesh,mergecellid)
+    @assert nbrcellsign == cellsign || nbrcellsign == 0 "Attempted to merge with cell of different phase"
 
     merge_cells!(mergedwithcell, cellsign, mergecellid, cellid)
     map_and_update_cell_quadrature!(
@@ -268,6 +267,7 @@ function merge_tiny_cells_in_mesh!(
                     facequads,
                     interfacequads,
                     cutmesh,
+                    quadareas,
                     istinycell,
                     +1,
                     cellid,
@@ -285,6 +285,7 @@ function merge_tiny_cells_in_mesh!(
                     facequads,
                     interfacequads,
                     cutmesh,
+                    quadareas,
                     istinycell,
                     -1,
                     cellid,
