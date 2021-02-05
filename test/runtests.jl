@@ -52,3 +52,7 @@ end
     include("test_displacement_and_traction_bc_convergence.jl")
     include("test_mixed_bc_convergence.jl")
 end
+
+@safetestset "Test Incoherent Interface Simple Tension" begin
+    include("test_incoherent_interface_simple_tension.jl")
+end
