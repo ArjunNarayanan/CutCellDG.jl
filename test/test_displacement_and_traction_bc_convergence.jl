@@ -212,8 +212,8 @@ u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
 dx = 1.0 ./ nelmts
 
-u1rate = diff(log.(u1err)) ./ diff(log.(dx))
-u2rate = diff(log.(u2err)) ./ diff(log.(dx))
+u1rate = convergence_rate(dx,u1err)
+u2rate = convergence_rate(dx,u2err)
 
 @test all(u1rate .> 2.95)
 @test all(u2rate .> 2.95)
