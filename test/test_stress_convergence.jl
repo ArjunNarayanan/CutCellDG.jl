@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
 include("useful_routines.jl")
 
@@ -245,4 +245,29 @@ err = [
 ]
 serr = [[er[i] for er in err] for i = 1:3]
 rates = [convergence_rate(dx, v) for v in serr]
-# @test all([all(rates[i] .> 1.95) for i = 1:3])
+@test all([all(rates[i] .> 1.95) for i = 1:3])
+
+
+
+
+
+powers = [3, 4, 5]
+nelmts = [2^p + 1 for p in powers]
+dx = 1.0 ./ nelmts
+interface_center = [0.3, 0.8]
+interface_radius = 0.15
+polyorder = 2
+numqp = required_quadrature_order(polyorder) + 2
+penaltyfactor = 1e2
+err = [
+    compute_stress_error(
+        x -> circle_distance_function(x, interface_center, interface_radius),
+        ne,
+        polyorder,
+        numqp,
+        penaltyfactor,
+    ) for ne in nelmts
+]
+serr = [[er[i] for er in err] for i = 1:3]
+rates = [convergence_rate(dx, v) for v in serr]
+@test all([all(rates[i] .> 1.95) for i = 1:3])

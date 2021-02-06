@@ -46,6 +46,7 @@ end
     include("test_vertical_plane_interface_convergence.jl")
     include("test_inclined_plane_interface_convergence.jl")
     include("test_curved_interface_convergence.jl")
+    include("test_stress_convergence.jl")
 end
 
 @safetestset "Test Traction BC Convergence" begin
@@ -55,4 +56,8 @@ end
 
 @safetestset "Test Incoherent Interface Simple Tension" begin
     include("test_incoherent_interface_simple_tension.jl")
+end
+
+@safetestset "Test Transformation Strain" begin
+    include("test_transformation_strain_simple_tension.jl")
 end

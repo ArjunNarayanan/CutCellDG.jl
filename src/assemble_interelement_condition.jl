@@ -115,6 +115,42 @@ function assemble_interelement_condition!(
 
 end
 
+function interelement_traction_operators(
+    basis,
+    quad1,
+    quad2,
+    normal,
+    stiffness,
+    dim,
+    facedetjac,
+    jac,
+    vectosymmconverter,
+    eta,
+)
+    numqp = length(quad1)
+    facescale = repeat([facedetjac], numqp)
+    normals = repeat(normal, inner = (1, numqp))
+    return coherent_traction_operators(
+        basis,
+        quad1,
+        quad2,
+        normals,
+        stiffness,
+        stiffness,
+        dim,
+        facescale,
+        jac,
+        vectosymmconverter,
+        eta,
+    )
+end
+
+function interelement_mass_operators(basis, quad1, quad2, dim, scale)
+    numqp = length(quad1)
+    facescale = repeat([scale], numqp)
+    return coherent_mass_operators(basis, quad1, quad2, dim, facescale)
+end
+
 function assemble_uniform_cell_interelement_condition!(
     sysmatrix,
     uniformtop,

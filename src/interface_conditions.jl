@@ -150,36 +150,6 @@ function component_traction_operators(
     return InterfaceTractionOperatorValues(nntop, nptop, pntop, pptop, eta)
 end
 
-function interelement_traction_operators(
-    basis,
-    quad1,
-    quad2,
-    normal,
-    stiffness,
-    dim,
-    facedetjac,
-    jac,
-    vectosymmconverter,
-    eta,
-)
-    numqp = length(quad1)
-    facescale = repeat([facedetjac], numqp)
-    normals = repeat(normal, inner = (1, numqp))
-    return coherent_traction_operators(
-        basis,
-        quad1,
-        quad2,
-        normals,
-        stiffness,
-        stiffness,
-        dim,
-        facescale,
-        jac,
-        vectosymmconverter,
-        eta,
-    )
-end
-
 struct InterfaceMassOperatorValues
     nn::Any
     np::Any
@@ -218,12 +188,6 @@ function component_mass_operators(
     pp = component_mass_matrix(basis, quad2, quad2, components, dim, facescale)
 
     return InterfaceMassOperatorValues(nn, np, pn, pp)
-end
-
-function interelement_mass_operators(basis, quad1, quad2, dim, scale)
-    numqp = length(quad1)
-    facescale = repeat([scale], numqp)
-    return coherent_mass_operators(basis, quad1, quad2, dim, facescale)
 end
 
 function assemble_interface_condition!(
