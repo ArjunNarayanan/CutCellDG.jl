@@ -15,9 +15,10 @@ lambda2, mu2 = 2.0, 4.0
 theta0 = -0.067
 e22 = K1 * theta0 / (lambda1 + 2mu1)
 penaltyfactor = 1e2
-nelmts = 1
+nelmts = 2
 dx = 1.0 / nelmts
 penalty = penaltyfactor / dx * (lambda1 + mu1)
+eta = 1
 stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
@@ -54,6 +55,22 @@ CutCellDG.assemble_bulk_transformation_linear_form!(
     cellquads,
     cutmesh,
 )
+CutCellDG.assemble_interelement_condition!(
+    sysmatrix,
+    basis,
+    facequads,
+    stiffness,
+    cutmesh,
+    penalty,
+    eta,
+)
+CutCellDG.assemble_interelement_transformation_linear_form!(
+    sysrhs,
+    transfstress,
+    basis,
+    facequads,
+    cutmesh,
+)
 
 CutCellDG.assemble_penalty_displacement_component_bc!(
     sysmatrix,
@@ -67,7 +84,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     [1.0, 0.0],
     penalty,
 )
-CutCellDG.assemble_penalty_displacement_component_transformation_rhs!(
+CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
@@ -89,7 +106,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     [0.0, 1.0],
     penalty,
 )
-CutCellDG.assemble_penalty_displacement_component_transformation_rhs!(
+CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
@@ -111,7 +128,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     [1.0, 0.0],
     penalty,
 )
-CutCellDG.assemble_penalty_displacement_component_transformation_rhs!(
+CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
@@ -128,8 +145,10 @@ rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
 sol = matrix \ rhs
 disp = reshape(sol, 2, :)
 
-testdisp = [
-    0.0 0.0 0.0 0.0
-    0.0 e22 0.0 e22
-]
+nodalcoordinates = CutCellDG.nodal_coordinates(mesh)
+
+testdisp = copy(nodalcoordinates)
+testdisp[1, :] .= 0.0
+testdisp[2, :] .*= e22
+
 @test allapprox(disp, testdisp, 1e2eps())

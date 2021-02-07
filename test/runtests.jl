@@ -60,4 +60,5 @@ end
 
 @safetestset "Test Transformation Strain" begin
     include("test_transformation_strain_simple_tension.jl")
+    include("test_transformation_strain_displacement_convergence.jl")
 end

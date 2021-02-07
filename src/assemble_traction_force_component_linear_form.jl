@@ -82,6 +82,5 @@ function assemble_face_traction_force_component_linear_form!(
         facedetjac[faceid],
     )
     nodeids = nodal_connectivity(mesh, cellsign, cellid)
-    edofs = element_dofs(nodeids, dim)
-    assemble!(systemrhs, edofs, rhs)
+    assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
 end

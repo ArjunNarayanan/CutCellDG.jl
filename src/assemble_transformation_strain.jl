@@ -27,8 +27,7 @@ function assemble_bulk_transformation_linear_form!(
                 vectosymmconverter,
             )
             nodeids = nodal_connectivity(mesh, +1, cellid)
-            edofs = element_dofs(nodeids, dim)
-            assemble!(systemrhs, edofs, rhs)
+            assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
         end
     end
 end
@@ -146,7 +145,7 @@ function component_transformation_linear_form(
 
     numqp = length(quad)
     normals = repeat(normal, inner = (1, numqp))
-    components = repeat(component,inner=(1,numqp))
+    components = repeat(component, inner = (1, numqp))
     scalearea = repeat([facedetjac], numqp)
     return component_interface_transformation_linear_form(
         transfstress,
@@ -181,8 +180,7 @@ function assemble_face_interelement_transformation_linear_form!(
         facedetjac,
         vectosymmconverter,
     )
-    edofs = element_dofs(nodeids, dim)
-    assemble!(systemrhs, edofs, rhs)
+    assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
 end
 
 function assemble_face_component_transformation_linear_form!(
@@ -208,11 +206,10 @@ function assemble_face_component_transformation_linear_form!(
         facedetjac,
         vectosymmconverter,
     )
-    edofs = element_dofs(nodeids, dim)
-    assemble!(systemrhs, edofs, rhs)
+    assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
 end
 
-function assemble_penalty_displacement_transformation_rhs!(
+function assemble_penalty_displacement_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
@@ -237,7 +234,7 @@ function assemble_penalty_displacement_transformation_rhs!(
             cellmap = cell_map(mesh, +1, cellid)
             for faceid = 1:nfaces
                 if cell_connectivity(mesh, faceid, cellid) == 0 &&
-                   onboundary(cellmap1(facemidpoints[faceid]))
+                   onboundary(cellmap(facemidpoints[faceid]))
 
                     quad = facequads[+1, faceid, cellid]
                     nodeids = nodal_connectivity(mesh, +1, cellid)
@@ -259,7 +256,7 @@ function assemble_penalty_displacement_transformation_rhs!(
     end
 end
 
-function assemble_penalty_displacement_component_transformation_rhs!(
+function assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
@@ -303,6 +300,88 @@ function assemble_penalty_displacement_component_transformation_rhs!(
                         vectosymmconverter,
                     )
                 end
+            end
+        end
+    end
+end
+
+function assemble_coherent_interface_transformation_linear_form!(
+    systemrhs,
+    transfstress,
+    basis,
+    interfacequads,
+    mesh,
+)
+
+    ncells = number_of_cells(mesh)
+    dim = dimension(mesh)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
+
+    for cellid = 1:ncells
+        cellsign = cell_sign(mesh,cellid)
+
+        if cellsign == 0
+            normals = interface_normals(interfacequads, cellid)
+            scalearea = interface_scale_areas(interfacequads, cellid)
+
+            for s in [+1, -1]
+                quad = interfacequads[s, cellid]
+                rhs =
+                    s *
+                    0.5 *
+                    coherent_interface_transformation_linear_form(
+                        transfstress,
+                        basis,
+                        quad,
+                        normals,
+                        dim,
+                        scalearea,
+                        vectosymmconverter,
+                    )
+                nodeids = nodal_connectivity(mesh, s, cellid)
+                assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
+            end
+        end
+    end
+end
+
+function assemble_incoherent_interface_transformation_linear_form!(
+    systemrhs,
+    transfstress,
+    basis,
+    interfacequads,
+    mesh,
+)
+
+    ncells = number_of_cells(mesh)
+    dim = dimension(mesh)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
+
+    for cellid = 1:ncells
+        cellsign = cell_sign(mesh,cellid)
+
+        if cellsign == 0
+            normals = interface_normals(interfacequads, cellid)
+            components = normals
+            scalearea = interface_scale_areas(interfacequads, cellid)
+
+            for s in [+1, -1]
+                quad = interfacequads[s, cellid]
+                rhs =
+                    s *
+                    0.5 *
+                    component_interface_transformation_linear_form(
+                        transfstress,
+                        basis,
+                        quad,
+                        components,
+                        normals,
+                        dim,
+                        scalearea,
+                        vectosymmconverter,
+                    )
+                nodeids = nodal_connectivity(mesh, s, cellid)
+                assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
             end
         end
     end
