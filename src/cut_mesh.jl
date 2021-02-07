@@ -42,10 +42,6 @@ function reference_corner(cutmesh::CutMesh)
     return reference_corner(background_mesh(cutmesh))
 end
 
-function widths(cutmesh::CutMesh)
-    return widths(background_mesh(cutmesh))
-end
-
 function number_of_cells(cutmesh::CutMesh)
     return cutmesh.ncells
 end

@@ -29,6 +29,10 @@ function widths(mesh::UniformMesh)
     return mesh.widths
 end
 
+function widths(mesh)
+    return widths(background_mesh(mesh))
+end
+
 function cell_sign_to_row(s)
     (s == -1 || s == +1) || error("Use ±1 to index into rows (i.e. phase), got index = $s")
     row = s == +1 ? 1 : 2
