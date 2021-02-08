@@ -5,9 +5,15 @@ struct InterfaceQuadratures
     scaleareas::Any
     celltoquad::Any
     ncells::Any
+    totalnumqps
     function InterfaceQuadratures(quads, normals, tangents, scaleareas, celltoquad)
         ncells = length(celltoquad)
         nphase, nquads = size(quads)
+
+        interfacenumqps = length.(quads)
+        interfacenumqps = nquads == 0 ? [0,0] : sum(interfacenumqps,dims=2)
+        @assert interfacenumqps[1] == interfacenumqps[2]
+        totalnumqps = interfacenumqps[1]
 
         @assert nphase == 2
         @assert length(normals) == nquads
@@ -16,7 +22,7 @@ struct InterfaceQuadratures
         @assert all(celltoquad .>= 0)
         @assert all(celltoquad .<= nquads)
 
-        new(quads, normals, tangents, scaleareas, celltoquad, ncells)
+        new(quads, normals, tangents, scaleareas, celltoquad, ncells, totalnumqps)
     end
 end
 
@@ -85,6 +91,10 @@ function InterfaceQuadratures(cutmesh::CutMesh, levelset, levelsetcoeffs, numqp)
     )
 end
 
+function total_number_of_quadrature_points(interfacequads::InterfaceQuadratures)
+    return interfacequads.totalnumqps
+end
+
 function update_interface_quadrature!(
     quads,
     normals,
@@ -151,4 +161,26 @@ function update_interface_quadrature!(
     row = cell_sign_to_row(s)
     idx = interfacequads.celltoquad[cellid]
     interfacequads.quads[row, idx] = quad
+end
+
+function collect_interface_normals(interfacequads,mesh)
+
+    totalnumqps = total_number_of_quadrature_points(interfacequads)
+    ncells = number_of_cells(mesh)
+    interfacenormals = zeros(2,totalnumqps)
+    start = 1
+
+    for cellid in 1:ncells
+        cellsign = cell_sign(mesh,cellid)
+        if cellsign == 0
+            normals = interface_normals(interfacequads,cellid)
+            numqps = size(normals)[2]
+
+            stop = start + numqps - 1
+
+            interfacenormals[:,start:stop] = normals
+            start = stop + 1
+        end
+    end
+    return interfacenormals
 end

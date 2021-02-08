@@ -6,6 +6,12 @@ using CutCellDG
 include("../../../test/useful_routines.jl")
 include("../elasticity-solver.jl")
 
+function angular_position(points)
+    cpoints = points[1, :] + im * points[2, :]
+    return rad2deg.(angle.(cpoints))
+end
+
+
 K1, K2 = 247.0, 192.0    # Pa
 mu1, mu2 = 126.0, 87.0   # Pa
 lambda1 = lame_lambda(K1, mu1)
@@ -18,11 +24,10 @@ polyorder = 2
 numqp = required_quadrature_order(polyorder) + 2
 nelmts = 17
 basis = TensorProductBasis(2, polyorder)
-interfacepoint = [0.8, 0.0]
-interfaceangle = 40.0
-interfacenormal = [cosd(interfaceangle), sind(interfaceangle)]
+interface_center = [0.5, 0.5]
+interface_radius = 1.0/3.0
 
-distancefunc(x) = plane_distance_function(x, interfacenormal, interfacepoint)
+distancefunc(x) = -circle_distance_function(x,interface_center,interface_radius)
 
 nodaldisplacement, mergedmesh, cellquads, facequads, interfacequads =
     nodal_displacement(
@@ -44,14 +49,16 @@ spatialpoints = spatialseedpoints[1, :, :]
 referencepoints = refseedpoints
 referencecellids = seedcellids
 
+relspatialpoints = spatialpoints .- interface_center
+angularposition = angular_position(relspatialpoints)
+sortidx = sortperm(angularposition)
 
-sortidx = sortperm(spatialpoints[2, :])
+angularposition = angularposition[sortidx]
 spatialpoints = spatialpoints[:, sortidx]
 referencepoints = referencepoints[:, :, sortidx]
 referencecellids = referencecellids[:, sortidx]
 interfacenormals = interfacenormals[:, sortidx]
 
-spycoords = spatialpoints[2, :]
 
 productdisplacement = CutCellDG.displacement_at_reference_points(
     nodaldisplacement,
@@ -74,17 +81,19 @@ exactdisplacement =
 
 # using PyPlot
 # fig,ax = PyPlot.subplots(2,1)
-# ax[1].plot(spycoords,productdisplacement[1,:],label="product u1")
-# ax[1].plot(spycoords,parentdisplacement[1,:],label="parent u1")
-# ax[1].plot(spycoords,exactdisplacement[1,:],"--",label="exact")
-# ax[2].plot(spycoords,productdisplacement[2,:],label="product u1")
-# ax[2].plot(spycoords,parentdisplacement[2,:],label="parent u1")
-# ax[2].plot(spycoords,exactdisplacement[2,:],"--",label="exact")
+# ax[1].plot(angularposition,productdisplacement[1,:],label="product u1")
+# ax[1].plot(angularposition,parentdisplacement[1,:],label="parent u1")
+# ax[1].plot(angularposition,exactdisplacement[1,:],"--",label="exact")
+# ax[2].plot(angularposition,productdisplacement[2,:],label="product u1")
+# ax[2].plot(angularposition,parentdisplacement[2,:],label="parent u1")
+# ax[2].plot(angularposition,exactdisplacement[2,:],"--",label="exact")
 # ax[1].grid()
 # ax[2].grid()
 # ax[1].legend()
 # ax[2].legend()
 # fig
+
+
 
 
 productstress = CutCellDG.stress_at_reference_points(
@@ -115,13 +124,12 @@ exacttraction = CutCellDG.traction_force_at_points(exactstress,interfacenormals)
 
 fig,ax = PyPlot.subplots(2,1)
 
-ax[1].plot(spycoords,producttraction[1,:],label="product t1")
-ax[1].plot(spycoords,parenttraction[1,:],label="parent t1")
-ax[1].plot(spycoords,exacttraction[1,:],"--",label="exact t1")
-
-ax[2].plot(spycoords,producttraction[2,:],label="product t2")
-ax[2].plot(spycoords,parenttraction[2,:],label="parent t2")
-ax[2].plot(spycoords,exacttraction[2,:],"--",label="exact t2")
+ax[1].plot(angularposition,producttraction[1,:],label="product t1")
+ax[1].plot(angularposition,parenttraction[1,:],label="parent t1")
+ax[1].plot(angularposition,exacttraction[1,:],"--",label="exact t1")
+ax[2].plot(angularposition,producttraction[2,:],label="product t2")
+ax[2].plot(angularposition,parenttraction[2,:],label="parent t2")
+ax[2].plot(angularposition,exacttraction[2,:],"--",label="exact t2")
 
 ax[1].grid()
 ax[2].grid()

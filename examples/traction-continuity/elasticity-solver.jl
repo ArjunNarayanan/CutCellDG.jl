@@ -1,3 +1,11 @@
+function bulk_modulus(l, m)
+    return l + 2m / 3
+end
+
+function lame_lambda(k, m)
+    return k - 2m / 3
+end
+
 function displacement(alpha, x)
     u1 = alpha * x[2] * sin(pi * x[1])
     u2 = alpha * (x[1]^3 + cos(pi * x[2]))
@@ -10,6 +18,17 @@ function body_force(lambda, mu, alpha, x)
         -alpha * (6mu * x[1] + (lambda + mu) * pi * cos(pi * x[1])) +
         alpha * (lambda + 2mu) * pi^2 * cos(pi * x[2])
     return [b1, b2]
+end
+
+function stress_field(lambda, mu, alpha, x)
+    s11 =
+        (lambda + 2mu) * alpha * pi * x[2] * cos(pi * x[1]) -
+        lambda * alpha * pi * sin(pi * x[2])
+    s22 =
+        -(lambda + 2mu) * alpha * pi * sin(pi * x[2]) +
+        lambda * alpha * pi * x[2] * cos(pi * x[1])
+    s12 = alpha * mu * (3x[1]^2 + sin(pi * x[1]))
+    return [s11, s22, s12]
 end
 
 function onboundary(x, L, W)
@@ -29,7 +48,7 @@ function assemble_linear_system(
 )
 
     L, W = CutCellDG.widths(mesh)
-    lambda, mu = CutCellDG.lame_coefficients(stiffness, +1)
+    lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
@@ -72,7 +91,7 @@ function assemble_linear_system(
     )
     CutCellDG.assemble_body_force!(
         sysrhs,
-        x -> body_force(lambda, mu, displacementscale, x),
+        x -> body_force(lambda1, mu1, displacementscale, x),
         basis,
         cellquads,
         mesh,
@@ -86,20 +105,21 @@ end
 
 function nodal_displacement(
     distancefunc,
+    stiffness,
     nelmts,
-    polyorder,
+    basis,
     numqp,
     penaltyfactor,
     eta,
 )
     L, W = 1.0, 1.0
-    lambda, mu = 1.0, 2.0
-    dx = 1.0 / nelmts
-    penalty = penaltyfactor / dx * (lambda + mu)
-    displacementscale = 0.1
-    stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
+    lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
+    lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
 
-    basis = TensorProductBasis(2, polyorder)
+    dx = 1.0 / nelmts
+    penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
+    displacementscale = 0.1
+
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
     levelset = InterpolatingPolynomial(1, basis)
     levelsetcoeffs = CutCellDG.levelset_coefficients(distancefunc, mesh)
@@ -132,5 +152,7 @@ function nodal_displacement(
         displacementscale,
     )
 
-    return matrix\rhs
+    nodaldisplacement = matrix \ rhs
+
+    return nodaldisplacement, mergedmesh, cellquads, facequads, interfacequads
 end
