@@ -134,3 +134,7 @@ function traction_force_at_points(stresses, normals)
     end
     return tractionforce
 end
+
+function pressure_at_points(stress)
+    return -1.0/3.0*(stress[1,:] + stress[2,:] + stress[4,:])
+end

@@ -137,6 +137,7 @@ function nodal_displacement(
         cellquads,
         facequads,
         interfacequads,
+        tinyratio=0.2
     )
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
@@ -155,4 +156,139 @@ function nodal_displacement(
     nodaldisplacement = matrix \ rhs
 
     return nodaldisplacement, mergedmesh, cellquads, facequads, interfacequads
+end
+
+
+function product_stress(
+    celldisp,
+    basis,
+    stiffness,
+    transfstress,
+    theta0,
+    point,
+    jac,
+    vectosymmconverter,
+)
+
+    dim = length(vectosymmconverter)
+    lambda, mu = CutCellDG.lame_coefficients(stiffness, +1)
+
+    grad = CutCellDG.transform_gradient(gradient(basis, point), jac)
+    NK = sum([CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
+    symmdispgrad = NK * celldisp
+
+    inplanestress = (stiffness[+1] * symmdispgrad) - transfstress
+    s33 =
+        lambda * (symmdispgrad[1] + symmdispgrad[2]) -
+        (lambda + 2mu / 3) * theta0
+
+    stress = vcat(inplanestress, s33)
+
+    return stress
+end
+
+function product_stress_at_reference_points(
+    nodaldisplacement,
+    basis,
+    stiffness,
+    transfstress,
+    theta0,
+    referencepoints,
+    referencecellids,
+    mesh,
+)
+
+    dim = CutCellDG.dimension(mesh)
+    nphase, dim2, numpts = size(referencepoints)
+    @assert dim == dim2
+    @assert size(referencecellids) == (nphase, numpts)
+
+    productstress = zeros(4, numpts)
+    vectosymmconverter = CutCellDG.vector_to_symmetric_matrix_converter()
+    jac = CutCellDG.jacobian(mesh)
+
+    row = CutCellDG.cell_sign_to_row(+1)
+
+    for i = 1:numpts
+        cellid = referencecellids[row, i]
+        nodeids = CutCellDG.nodal_connectivity(mesh, +1, cellid)
+        celldofs = CutCellDG.element_dofs(nodeids, dim)
+        celldisp = nodaldisplacement[celldofs]
+        point = referencepoints[row, :, i]
+
+        productstress[:, i] .= product_stress(
+            celldisp,
+            basis,
+            stiffness,
+            transfstress,
+            theta0,
+            point,
+            jac,
+            vectosymmconverter,
+        )
+    end
+    return productstress
+end
+
+
+function parent_stress(
+    celldisp,
+    basis,
+    stiffness,
+    point,
+    jac,
+    vectosymmconverter,
+)
+    dim = length(vectosymmconverter)
+    lambda, mu = CutCellDG.lame_coefficients(stiffness, -1)
+
+    grad = CutCellDG.transform_gradient(gradient(basis, point), jac)
+    NK = sum([CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
+    symmdispgrad = NK * celldisp
+
+    inplanestress = stiffness[-1] * symmdispgrad
+    s33 = lambda * (symmdispgrad[1] + symmdispgrad[2])
+
+    stress = vcat(inplanestress, s33)
+
+    return stress
+end
+
+function parent_stress_at_reference_points(
+    nodaldisplacement,
+    basis,
+    stiffness,
+    referencepoints,
+    referencecellids,
+    mesh,
+)
+
+    dim = CutCellDG.dimension(mesh)
+    nphase, dim2, numpts = size(referencepoints)
+    @assert dim == dim2
+    @assert size(referencecellids) == (nphase, numpts)
+
+    parentstress = zeros(4, numpts)
+    vectosymmconverter = CutCellDG.vector_to_symmetric_matrix_converter()
+    jac = CutCellDG.jacobian(mesh)
+
+    row = CutCellDG.cell_sign_to_row(-1)
+
+    for i = 1:numpts
+        cellid = referencecellids[row, i]
+        nodeids = CutCellDG.nodal_connectivity(mesh, -1, cellid)
+        celldofs = CutCellDG.element_dofs(nodeids, dim)
+        celldisp = nodaldisplacement[celldofs]
+        point = referencepoints[row, :, i]
+
+        parentstress[:, i] .= parent_stress(
+            celldisp,
+            basis,
+            stiffness,
+            point,
+            jac,
+            vectosymmconverter,
+        )
+    end
+    return parentstress
 end
