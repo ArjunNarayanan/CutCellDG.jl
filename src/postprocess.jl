@@ -7,20 +7,18 @@ function interpolate_at_reference_points(
     levelsetsign,
     mesh,
 )
-    nphase, dim, numpts = size(refpoints)
-    @assert size(refcellids) == (nphase,numpts)
-    @assert nphase == 2
-    row = cell_sign_to_row(levelsetsign)
+    dim, numpts = size(refpoints)
+    @assert length(refcellids) == numpts
 
     interpolatedvals = zeros(dofspernode, numpts)
 
     for idx = 1:numpts
-        cellid = refcellids[row,idx]
+        cellid = refcellids[idx]
         nodeids = nodal_connectivity(mesh, levelsetsign, cellid)
         celldofs = element_dofs(nodeids, dofspernode)
         cellvals = nodalvalues[celldofs]
 
-        vals = basis(refpoints[row, :, idx])
+        vals = basis(refpoints[:, idx])
         NI = interpolation_matrix(vals, dofspernode)
 
         interpolatedvals[:, idx] = NI * cellvals
@@ -28,6 +26,8 @@ function interpolate_at_reference_points(
 
     return interpolatedvals
 end
+
+
 
 function displacement_at_reference_points(
     nodaldisplacement,
@@ -137,4 +137,36 @@ end
 
 function pressure_at_points(stress)
     return -1.0/3.0*(stress[1,:] + stress[2,:] + stress[4,:])
+end
+
+function collect_cell_quadratures(cellquads,mesh,cellsign,cellids)
+    totalnumqps = sum([length(cellquads[cellsign,cellid]) for cellid in cellids])
+    dim = dimension(mesh)
+
+    referencepoints = zeros(dim,totalnumqps)
+    spatialpoints = zeros(dim,totalnumqps)
+    referencecellids = zeros(Int,totalnumqps)
+
+    start = 1
+    for cellid in cellids
+        quad = cellquads[cellsign,cellid]
+        numqps = length(quad)
+
+        stop = start + numqps - 1
+        cellmap = cell_map(mesh,cellsign,cellid)
+
+        referencepoints[:,start:stop] = points(quad)
+        spatialpoints[:,start:stop] = cellmap(points(quad))
+        referencecellids[start:stop] = repeat([cellid],numqps)
+
+        start = stop + 1
+    end
+    return referencepoints,spatialpoints,referencecellids
+end
+
+function collect_cell_quadratures(cellquads,mesh,cellsign)
+    ncells = number_of_cells(mesh)
+    cellsigns = [cell_sign(mesh,cellid) for cellid in 1:ncells]
+    cellids = findall(x->x == cellsign || x == 0, cellsigns)
+    collect_cell_quadratures(cellquads,mesh,cellsign,cellids)
 end

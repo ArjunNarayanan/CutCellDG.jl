@@ -25,9 +25,9 @@ stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
-meshwidth = [1.0, 1.0]
-delta = 1e-2meshwidth[1]
-nelmts = 3
+width = 1.0
+meshwidth = [width, width]
+nelmts = 17
 polyorder = 2
 numqp = required_quadrature_order(polyorder) + 2
 penaltyfactor = 1e2
@@ -40,7 +40,7 @@ penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
 
 basis = TensorProductBasis(2, polyorder)
 interfacecenter = [0.5, 0.5]
-interfaceradius = dx / sqrt(2) + delta
+interfaceradius = width/3.0
 outerradius = 2.0
 analyticalsolution = AnalyticalSolution(
     interfaceradius,
@@ -60,7 +60,6 @@ mesh, cellquads, facequads, interfacequads = construct_mesh_and_quadratures(
     basis,
     interfacecenter,
     interfaceradius,
-    numqp
 )
 
 nodaldisplacement = nodal_displacement(
@@ -228,8 +227,8 @@ ax.plot(angularposition, parenttractionerror, label = "parent")
 ax.plot(angularposition, producttractionerror, label = "product")
 ax.legend()
 ax.grid()
-ax.set_xlim(0,90)
-ax.set_ylim(0,10.0)
+# ax.set_xlim(0,90)
+# ax.set_ylim(0,10.0)
 ax.set_title("DG + Merging: Traction Error")
 fig
 # fig.savefig(folderpath*filename*"-traction-error.png")

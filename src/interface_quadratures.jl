@@ -165,22 +165,27 @@ end
 
 function collect_interface_normals(interfacequads,mesh)
 
-    totalnumqps = total_number_of_quadrature_points(interfacequads)
     ncells = number_of_cells(mesh)
+    cellsign = [cell_sign(mesh,cellid) for cellid in 1:ncells]
+    cellids = findall(cellsign .== 0)
+
+    return collect_interface_normals(interfacequads,mesh,cellids)
+end
+
+function collect_interface_normals(interfacequads,mesh,cellids)
+
+    totalnumqps = sum([length(interfacequads[1,cellid]) for cellid in cellids])
     interfacenormals = zeros(2,totalnumqps)
     start = 1
 
-    for cellid in 1:ncells
-        cellsign = cell_sign(mesh,cellid)
-        if cellsign == 0
-            normals = interface_normals(interfacequads,cellid)
-            numqps = size(normals)[2]
+    for cellid in cellids
+        normals = interface_normals(interfacequads,cellid)
+        numqps = size(normals)[2]
 
-            stop = start + numqps - 1
+        stop = start + numqps - 1
 
-            interfacenormals[:,start:stop] = normals
-            start = stop + 1
-        end
+        interfacenormals[:,start:stop] = normals
+        start = stop + 1
     end
     return interfacenormals
 end

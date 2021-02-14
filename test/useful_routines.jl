@@ -163,3 +163,31 @@ end
 function convergence_rate(dx, err)
     return diff(log.(err)) ./ diff(log.(dx))
 end
+
+function add_cell_norm_squared!(vals, func, cellmap, quad)
+    detjac = CutCellDG.determinant_jacobian(cellmap)
+    for (p, w) in quad
+        v = func(cellmap(p))
+        vals .+= v .^ 2 * detjac * w
+    end
+end
+
+function integral_norm_on_mesh(func, cellquads, mesh, ndofs)
+    vals = zeros(ndofs)
+    ncells = CutCellDG.number_of_cells(mesh)
+    for cellid = 1:ncells
+        s = CutCellDG.cell_sign(mesh, cellid)
+        @assert s == -1 || s == 0 || s == 1
+        if s == 1 || s == 0
+            cellmap = CutCellDG.cell_map(mesh, +1, cellid)
+            pquad = cellquads[+1, cellid]
+            add_cell_norm_squared!(vals, func, cellmap, pquad)
+        end
+        if s == -1 || s == 0
+            cellmap = CutCellDG.cell_map(mesh, -1, cellid)
+            nquad = cellquads[-1, cellid]
+            add_cell_norm_squared!(vals, func, cellmap, nquad)
+        end
+    end
+    return sqrt.(vals)
+end

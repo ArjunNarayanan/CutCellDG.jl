@@ -1,5 +1,4 @@
 using LinearAlgebra
-using PyPlot
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -26,14 +25,15 @@ transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
 meshwidth = [1.0, 1.0]
-delta = 1e-2meshwidth[1]
+delta = 1e-1meshwidth[1]
 nelmts = 3
-polyorder = 2
+polyorder = 3
 numqp = required_quadrature_order(polyorder) + 2
-penaltyfactor = 1e2
+highresnumqp = 50
+penaltyfactor = 1e3
 
 folderpath = "examples/traction-continuity-with-transformation/cylindrical-particle/cylindrical-bc/"
-filename = "unequal-moduli-pure-transformation"
+filename = "equal-moduli-pure-pressure-high-resolution"
 
 dx = minimum(meshwidth) / nelmts
 penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
@@ -60,8 +60,19 @@ mesh, cellquads, facequads, interfacequads = construct_mesh_and_quadratures(
     basis,
     interfacecenter,
     interfaceradius,
-    numqp
+    numqp,
 )
+
+mesh2, cellquads2, facequads2, highresinterfacequads =
+    construct_mesh_and_quadratures(
+        meshwidth,
+        nelmts,
+        basis,
+        interfacecenter,
+        interfaceradius,
+        highresnumqp,
+    )
+
 
 nodaldisplacement = nodal_displacement(
     mesh,
@@ -87,18 +98,21 @@ exactsolutionL2error =
 normalizedL2error = L2error ./ exactsolutionL2error
 
 refseedpoints, spatialseedpoints, seedcellids =
-    CutCellDG.seed_zero_levelset_with_interfacequads(interfacequads, mesh)
-# checkcellids = [8,9]
+    CutCellDG.seed_zero_levelset_with_interfacequads(
+        highresinterfacequads,
+        mesh,
+    )
+# checkcellids = 8
 # refseedpoints, spatialseedpoints, seedcellids =
 #     CutCellDG.seed_zero_levelset_with_interfacequads(
-#         interfacequads,
+#         highresinterfacequads,
 #         mesh,
 #         checkcellids,
 #     )
 
 
-normals = CutCellDG.collect_interface_normals(interfacequads, mesh)
-# normals = CutCellDG.collect_interface_normals(interfacequads,mesh,checkcellids)
+normals = CutCellDG.collect_interface_normals(highresinterfacequads, mesh)
+# normals = CutCellDG.collect_interface_normals(highresinterfacequads,mesh,checkcellids)
 
 spatialpoints = spatialseedpoints[1, :, :]
 referencepoints = refseedpoints
@@ -118,34 +132,36 @@ normals = normals[:, sortidx]
 productdisplacement = CutCellDG.displacement_at_reference_points(
     nodaldisplacement,
     basis,
-    referencepoints,
-    referencecellids,
+    referencepoints[1,:,:],
+    referencecellids[1,:],
     +1,
     mesh,
 )
 parentdisplacement = CutCellDG.displacement_at_reference_points(
     nodaldisplacement,
     basis,
-    referencepoints,
-    referencecellids,
+    referencepoints[2,:,:],
+    referencecellids[2,:],
     -1,
     mesh,
 )
 exactdisplacement = mapslices(analyticalsolution, spatialpoints, dims = 1)
 
+using PyPlot
+
 # fig,ax = PyPlot.subplots(2,1)
 # ax[1].plot(angularposition,productdisplacement[1,:],label="product u1")
 # ax[1].plot(angularposition,parentdisplacement[1,:],label="parent u1")
 # ax[1].plot(angularposition,exactdisplacement[1,:],"--",label="exact")
-# ax[2].plot(angularposition,productdisplacement[2,:],label="product u1")
-# ax[2].plot(angularposition,parentdisplacement[2,:],label="parent u1")
+# ax[2].plot(angularposition,productdisplacement[2,:],label="product u2")
+# ax[2].plot(angularposition,parentdisplacement[2,:],label="parent u2")
 # ax[2].plot(angularposition,exactdisplacement[2,:],"--",label="exact")
 # ax[1].grid()
 # ax[2].grid()
 # ax[1].legend()
 # ax[2].legend()
 # fig
-#
+
 productdisplacementmagnitude =
     vec(mapslices(norm, productdisplacement, dims = 1))
 parentdisplacementmagnitude = vec(mapslices(norm, parentdisplacement, dims = 1))
@@ -163,11 +179,11 @@ ax.plot(angularposition, parentdisplacementerror, label = "parent")
 ax.plot(angularposition, productdisplacementerror, label = "product")
 ax.legend()
 ax.grid()
-ax.set_ylim(0,0.15)
-ax.set_xlim(0,90)
-ax.set_title("DG + Merging: Displacement Error")
+# ax.set_ylim(0, 7e-4)
+# ax.set_xlim(0, 90)
+# ax.set_title("DG + Merging: Displacement Error")
 fig
-# fig.savefig(folderpath*filename*"-displacement-error.png")
+# fig.savefig(folderpath*filename*"-cell-"*string(checkcellids)*"-displacement-error.png")
 
 
 productstress = product_stress_at_reference_points(
@@ -228,8 +244,8 @@ ax.plot(angularposition, parenttractionerror, label = "parent")
 ax.plot(angularposition, producttractionerror, label = "product")
 ax.legend()
 ax.grid()
-ax.set_xlim(0,90)
-ax.set_ylim(0,10.0)
+# ax.set_xlim(0,90)
+# ax.set_ylim(0,0.006)
 ax.set_title("DG + Merging: Traction Error")
 fig
-# fig.savefig(folderpath*filename*"-traction-error.png")
+# fig.savefig(folderpath*filename*"-cell-"*string(checkcellids)*"-traction-error.png")

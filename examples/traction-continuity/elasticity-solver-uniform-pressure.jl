@@ -6,33 +6,24 @@ function lame_lambda(k, m)
     return k - 2m / 3
 end
 
-function displacement(alpha, x)
-    u1 = alpha * x[2] * sin(pi * x[1])
-    u2 = alpha * (x[1]^3 + cos(pi * x[2]))
-    return [u1, u2]
+function stress_field(x)
+    return [1.0, 1.0, 0.0]
 end
 
-function body_force(lambda, mu, alpha, x)
-    b1 = alpha * (lambda + 2mu) * pi^2 * x[2] * sin(pi * x[1])
-    b2 =
-        -alpha * (6mu * x[1] + (lambda + mu) * pi * cos(pi * x[1])) +
-        alpha * (lambda + 2mu) * pi^2 * cos(pi * x[2])
-    return [b1, b2]
+function onleftboundary(x, L, W)
+    return x[1] ≈ 0.0
 end
 
-function stress_field(lambda, mu, alpha, x)
-    s11 =
-        (lambda + 2mu) * alpha * pi * x[2] * cos(pi * x[1]) -
-        lambda * alpha * pi * sin(pi * x[2])
-    s22 =
-        -(lambda + 2mu) * alpha * pi * sin(pi * x[2]) +
-        lambda * alpha * pi * x[2] * cos(pi * x[1])
-    s12 = alpha * mu * (3x[1]^2 + sin(pi * x[1]))
-    return [s11, s22, s12]
+function onbottomboundary(x, L, W)
+    return x[2] ≈ 0.0
 end
 
-function onboundary(x, L, W)
-    return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
+function onrightboundary(x, L, W)
+    return x[1] ≈ L
+end
+
+function ontopboundary(x, L, W)
+    return x[2] ≈ W
 end
 
 function assemble_linear_system(
@@ -78,23 +69,46 @@ function assemble_linear_system(
         penalty,
         eta,
     )
-    CutCellDG.assemble_penalty_displacement_bc!(
+    CutCellDG.assemble_penalty_displacement_component_bc!(
         sysmatrix,
         sysrhs,
-        x -> displacement(displacementscale, x),
+        x -> 0.0,
         basis,
         facequads,
         stiffness,
         mesh,
-        x -> onboundary(x, L, W),
+        x -> onleftboundary(x, L, W),
+        [1.0, 0.0],
         penalty,
     )
-    CutCellDG.assemble_body_force!(
+    CutCellDG.assemble_penalty_displacement_component_bc!(
+        sysmatrix,
         sysrhs,
-        x -> body_force(lambda1, mu1, displacementscale, x),
+        x -> 0.0,
         basis,
-        cellquads,
+        facequads,
+        stiffness,
         mesh,
+        x -> onbottomboundary(x, L, W),
+        [0.0, 1.0],
+        penalty,
+    )
+
+    CutCellDG.assemble_traction_force_linear_form!(
+        sysrhs,
+        x -> stress_field(x)[[1, 3]],
+        basis,
+        facequads,
+        mesh,
+        x -> onrightboundary(x, L, W),
+    )
+    CutCellDG.assemble_traction_force_linear_form!(
+        sysrhs,
+        x -> stress_field(x)[[3, 2]],
+        basis,
+        facequads,
+        mesh,
+        x -> ontopboundary(x, L, W),
     )
 
     matrix = CutCellDG.sparse_displacement_operator(sysmatrix, mesh)
@@ -137,7 +151,7 @@ function nodal_displacement(
         cellquads,
         facequads,
         interfacequads,
-        tinyratio=0.2
+        tinyratio = 0.2,
     )
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 

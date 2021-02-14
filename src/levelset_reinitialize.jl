@@ -1,16 +1,23 @@
 function seed_zero_levelset_with_interfacequads(interfacequads, mesh)
 
-    totalnumqps = total_number_of_quadrature_points(interfacequads)
+    ncells = number_of_cells(mesh)
+    cellsign = [cell_sign(mesh,cellid) for cellid in 1:ncells]
+    cellids = findall(cellsign .== 0)
+
+    return seed_zero_levelset_with_interfacequads(interfacequads,mesh,cellids)
+end
+
+function seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
+
+    totalnumqps = sum([length(interfacequads[1,cellid]) for cellid in cellids])
     dim = dimension(mesh)
 
     refseedpoints = zeros(2, dim, totalnumqps)
     spatialseedpoints = zeros(2, dim, totalnumqps)
     seedcellids = zeros(Int, 2, totalnumqps)
 
-    ncells = number_of_cells(mesh)
-
     start = 1
-    for cellid in 1:ncells
+    for cellid in cellids
         cellsign = cell_sign(mesh,cellid)
 
         if cellsign == 0
