@@ -191,3 +191,57 @@ function integral_norm_on_mesh(func, cellquads, mesh, ndofs)
     end
     return sqrt.(vals)
 end
+
+function add_interface_error_squared!(
+    err,
+    interpolater,
+    exactsolution,
+    cellmap,
+    quad,
+    facescale,
+)
+    @assert length(quad) == length(facescale)
+    for (i, (p, w)) in enumerate(quad)
+        numsol = interpolater(p)
+        exsol = exactsolution(cellmap(p))
+        err .+= (numsol - exsol) .^ 2 * facescale[i] * w
+    end
+end
+
+function interface_L2_error(
+    nodalsolutions,
+    exactsolution,
+    levelsetsign,
+    basis,
+    interfacequads,
+    mesh,
+)
+    ndofs = size(nodalsolutions)[1]
+    err = zeros(ndofs)
+    interpolater = InterpolatingPolynomial(ndofs, basis)
+
+    ncells = CutCellDG.number_of_cells(mesh)
+    cellsign = CutCell.cell_sign(mesh)
+    cellids = findall(cellsign .== 0)
+
+    for cellid in cellids
+        quad = interfacequads[levelsetsign, cellid]
+        normals = CutCell.interface_normals(interfacequads, cellid)
+        cellmap = CutCell.cell_map(cutmesh, cellid)
+        facescale = CutCell.scale_area(cellmap, normals)
+
+        nodeids = CutCell.nodal_connectivity(cutmesh, levelsetsign, cellid)
+        elementsolution = nodalsolutions[:, nodeids]
+        update!(interpolater, elementsolution)
+
+        add_interface_error_squared!(
+            err,
+            interpolater,
+            exactsolution,
+            cellmap,
+            quad,
+            facescale,
+        )
+    end
+    return sqrt.(err)
+end
