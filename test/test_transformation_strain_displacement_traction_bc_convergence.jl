@@ -204,8 +204,11 @@ function displacement_error(
     nelmts,
     polyorder,
     numqp,
-    penaltyfactor,
+    penaltyfactor;
+    eta = +1
 )
+    L = W = width
+    
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
     transfstress =

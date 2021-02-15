@@ -113,7 +113,7 @@ function displacement_error(
     polyorder,
     numqp,
     penaltyfactor;
-    eta = +1
+    eta = 1,
 )
     L = W = width
 
@@ -159,8 +159,6 @@ function displacement_error(
         facequads,
         interfacequads,
     )
-    quadareas = CutCellDG.quadrature_areas(cellquads, cutmesh)
-    # @assert hasmergedcells
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
 
@@ -241,18 +239,33 @@ function displacement_error(
     solution = matrix \ rhs
     nodaldisplacement = reshape(solution, 2, :)
 
-    err = mesh_L2_error(
+    err1 = interface_maxnorm_error(
         nodaldisplacement,
         analyticalsolution,
+        +1,
         basis,
-        cellquads,
+        interfacequads,
+        mergedmesh,
+    )
+    err2 = interface_maxnorm_error(
+        nodaldisplacement,
+        analyticalsolution,
+        -1,
+        basis,
+        interfacequads,
         mergedmesh,
     )
 
-    return err
+    exactnorm = maxnorm_on_interface(
+        analyticalsolution,
+        interfacequads,
+        +1,
+        mergedmesh,
+        2,
+    )
+
+    return err1 ./ exactnorm, err2 ./ exactnorm
 end
-
-
 
 
 lambda1, mu1 = 100.0, 80.0
@@ -261,13 +274,13 @@ theta0 = -0.067
 stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
 width = 1.0
-penaltyfactor = 1e3
+penaltyfactor = 1e2
 
 polyorder = 2
 numqp = required_quadrature_order(polyorder) + 2
 
 center = [width / 2, width / 2]
-inradius = width / 4
+inradius = width / 3
 outradius = width
 
 powers = [3, 4, 5]
@@ -288,46 +301,24 @@ err = [
     ) for ne in nelmts
 ]
 
-dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
+producterr = [er[1] for er in err]
+parenterr = [er[2] for er in err]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+productu1err = [p[1] for p in producterr]
+productu2err = [p[2] for p in producterr]
 
-@test all(u1rate .> 2.8)
-@test all(u2rate .> 2.8)
-
-
-
-
-center = [width, width]
-inradius = width / 2
-outradius = 2width
-powers = [3,4,5]
-nelmts = [2^p + 1 for p in powers]
-
-err = [
-    displacement_error(
-        width,
-        center,
-        inradius,
-        outradius,
-        stiffness,
-        theta0,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
+parentu1err = [p[1] for p in parenterr]
+parentu2err = [p[2] for p in parenterr]
 
 dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+productu1rate = convergence_rate(dx,productu1err)
+productu2rate = convergence_rate(dx,productu2err)
 
-@test all(u1rate .> 2.9)
-@test all(u2rate .> 2.9)
+parentu1rate = convergence_rate(dx,parentu1err)
+parentu2rate = convergence_rate(dx,parentu2err)
+
+@test all(productu1rate .> 2.6)
+@test all(productu2rate .> 2.6)
+@test all(parentu1rate .> 2.6)
+@test all(parentu2rate .> 2.6)

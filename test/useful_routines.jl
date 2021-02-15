@@ -221,27 +221,141 @@ function interface_L2_error(
     interpolater = InterpolatingPolynomial(ndofs, basis)
 
     ncells = CutCellDG.number_of_cells(mesh)
-    cellsign = CutCell.cell_sign(mesh)
-    cellids = findall(cellsign .== 0)
 
-    for cellid in cellids
-        quad = interfacequads[levelsetsign, cellid]
-        normals = CutCell.interface_normals(interfacequads, cellid)
-        cellmap = CutCell.cell_map(cutmesh, cellid)
-        facescale = CutCell.scale_area(cellmap, normals)
+    for cellid in 1:ncells
+        if CutCellDG.cell_sign(mesh,cellid) == 0
+            quad = interfacequads[levelsetsign, cellid]
+            cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
+            scalearea = CutCellDG.interface_scale_areas(interfacequads, cellid)
 
-        nodeids = CutCell.nodal_connectivity(cutmesh, levelsetsign, cellid)
-        elementsolution = nodalsolutions[:, nodeids]
-        update!(interpolater, elementsolution)
+            nodeids = CutCellDG.nodal_connectivity(mesh, levelsetsign, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
 
-        add_interface_error_squared!(
-            err,
-            interpolater,
-            exactsolution,
-            cellmap,
-            quad,
-            facescale,
-        )
+            add_interface_error_squared!(
+                err,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+                scalearea,
+            )
+        end
     end
     return sqrt.(err)
+end
+
+function add_interface_norm_squared!(vals, func, cellmap, quad, facescale)
+    @assert length(quad) == length(facescale)
+    for (i, (p, w)) in enumerate(quad)
+        v = func(cellmap(p))
+        vals .+= v .^ 2 * facescale[i] * w
+    end
+end
+
+function integral_norm_on_interface(
+    func,
+    interfacequads,
+    levelsetsign,
+    mesh,
+    ndofs,
+)
+    vals = zeros(ndofs)
+    ncells = CutCellDG.number_of_cells(mesh)
+
+    for cellid in 1:ncells
+        if CutCellDG.cell_sign(mesh,cellid) == 0
+            cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
+            quad = interfacequads[levelsetsign, cellid]
+            facescale = CutCellDG.interface_scale_areas(interfacequads, cellid)
+
+            add_interface_norm_squared!(vals, func, cellmap, quad, facescale)
+        end
+    end
+    return sqrt.(vals)
+end
+
+function update_maxnorm_error!(
+    globalerror,
+    interpolater,
+    exactsolution,
+    cellmap,
+    quad,
+)
+    ndofs = length(globalerror)
+    for (p,w) in quad
+        numsol = interpolater(p)
+        exsol = exactsolution(cellmap(p))
+        pointerror = abs.(numsol - exsol)
+        for i in 1:ndofs
+            globalerror[i] = max(globalerror[i],pointerror[i])
+        end
+    end
+end
+
+function interface_maxnorm_error(
+    nodalsolutions,
+    exactsolution,
+    levelsetsign,
+    basis,
+    interfacequads,
+    mesh,
+)
+    ndofs = size(nodalsolutions)[1]
+    err = zeros(ndofs)
+    interpolater = InterpolatingPolynomial(ndofs, basis)
+
+    ncells = CutCellDG.number_of_cells(mesh)
+
+    for cellid in 1:ncells
+        if CutCellDG.cell_sign(mesh,cellid) == 0
+            quad = interfacequads[levelsetsign, cellid]
+            cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
+
+            nodeids = CutCellDG.nodal_connectivity(mesh, levelsetsign, cellid)
+            elementsolution = nodalsolutions[:, nodeids]
+            update!(interpolater, elementsolution)
+
+            update_maxnorm_error!(
+                err,
+                interpolater,
+                exactsolution,
+                cellmap,
+                quad,
+            )
+        end
+    end
+    return err
+end
+
+
+function update_maxnorm!(vals, func, cellmap, quad)
+    ndofs = length(vals)
+    for (p,w) in quad
+        v = abs.(func(cellmap(p)))
+        for i in 1:ndofs
+            vals[i] = max(vals[i],v[i])
+        end
+    end
+end
+
+function maxnorm_on_interface(
+    func,
+    interfacequads,
+    levelsetsign,
+    mesh,
+    ndofs,
+)
+    vals = zeros(ndofs)
+    ncells = CutCellDG.number_of_cells(mesh)
+
+    for cellid in 1:ncells
+        if CutCellDG.cell_sign(mesh,cellid) == 0
+            cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
+            quad = interfacequads[levelsetsign, cellid]
+
+            update_maxnorm!(vals, func, cellmap, quad)
+        end
+    end
+    return vals
 end
