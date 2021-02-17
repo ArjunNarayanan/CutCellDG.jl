@@ -296,7 +296,6 @@ function construct_mesh_and_quadratures(
         cellquads,
         facequads,
         interfacequads,
-        tinyratio=0.1
     )
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 

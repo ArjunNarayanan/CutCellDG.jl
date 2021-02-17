@@ -161,7 +161,6 @@ function displacement_error(
     )
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
-
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
 

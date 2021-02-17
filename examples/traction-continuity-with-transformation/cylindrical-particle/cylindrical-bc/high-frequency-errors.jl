@@ -19,7 +19,6 @@ lambda2 = lame_lambda(K2, mu2)
 stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
 theta0 = -0.067
-p0 = -0.0
 stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)

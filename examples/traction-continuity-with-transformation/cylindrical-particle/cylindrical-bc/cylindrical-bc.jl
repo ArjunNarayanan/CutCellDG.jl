@@ -133,103 +133,103 @@ parentdisplacement = CutCellDG.displacement_at_reference_points(
 )
 exactdisplacement = mapslices(analyticalsolution, spatialpoints, dims = 1)
 
-# fig,ax = PyPlot.subplots(2,1)
-# ax[1].plot(angularposition,productdisplacement[1,:],label="product u1")
-# ax[1].plot(angularposition,parentdisplacement[1,:],label="parent u1")
-# ax[1].plot(angularposition,exactdisplacement[1,:],"--",label="exact")
-# ax[2].plot(angularposition,productdisplacement[2,:],label="product u1")
-# ax[2].plot(angularposition,parentdisplacement[2,:],label="parent u1")
-# ax[2].plot(angularposition,exactdisplacement[2,:],"--",label="exact")
-# ax[1].grid()
-# ax[2].grid()
-# ax[1].legend()
-# ax[2].legend()
-# fig
+fig,ax = PyPlot.subplots(2,1)
+ax[1].plot(angularposition,productdisplacement[1,:],label="product u1")
+ax[1].plot(angularposition,parentdisplacement[1,:],label="parent u1")
+ax[1].plot(angularposition,exactdisplacement[1,:],"--",label="exact")
+ax[2].plot(angularposition,productdisplacement[2,:],label="product u1")
+ax[2].plot(angularposition,parentdisplacement[2,:],label="parent u1")
+ax[2].plot(angularposition,exactdisplacement[2,:],"--",label="exact")
+ax[1].grid()
+ax[2].grid()
+ax[1].legend()
+ax[2].legend()
+fig
 #
-productdisplacementmagnitude =
-    vec(mapslices(norm, productdisplacement, dims = 1))
-parentdisplacementmagnitude = vec(mapslices(norm, parentdisplacement, dims = 1))
-exactdisplacementmagnitude = vec(mapslices(norm, exactdisplacement, dims = 1))
-
-parentdisplacementerror =
-    abs.(parentdisplacementmagnitude - exactdisplacementmagnitude) ./
-    exactdisplacementmagnitude
-productdisplacementerror =
-    abs.(productdisplacementmagnitude - exactdisplacementmagnitude) ./
-    exactdisplacementmagnitude
-
-fig, ax = PyPlot.subplots()
-ax.plot(angularposition, parentdisplacementerror, label = "parent")
-ax.plot(angularposition, productdisplacementerror, label = "product")
-ax.legend()
-ax.grid()
-ax.set_ylim(0,0.15)
-ax.set_xlim(0,90)
-ax.set_title("DG + Merging: Displacement Error")
-fig
-# fig.savefig(folderpath*filename*"-displacement-error.png")
-
-
-productstress = product_stress_at_reference_points(
-    nodaldisplacement,
-    basis,
-    stiffness,
-    transfstress,
-    theta0,
-    referencepoints,
-    referencecellids,
-    mesh,
-)
-parentstress = parent_stress_at_reference_points(
-    nodaldisplacement,
-    basis,
-    stiffness,
-    referencepoints,
-    referencecellids,
-    mesh,
-)
-exactstress =
-    mapslices(x -> exact_stress(analyticalsolution, x), spatialpoints, dims = 1)
-
-producttraction = CutCellDG.traction_force_at_points(productstress, normals)
-parenttraction = CutCellDG.traction_force_at_points(parentstress, normals)
-exacttraction = CutCellDG.traction_force_at_points(exactstress, normals)
-
-# fig, ax = PyPlot.subplots(2, 1)
-# ax[1].plot(angularposition, producttraction[1, :], label = "product")
-# ax[1].plot(angularposition, parenttraction[1, :], label = "parent")
-# ax[1].plot(angularposition, exacttraction[1, :], "--", label = "exact")
-# ax[1].set_title("t1")
-# ax[1].legend()
-# ax[1].grid()
-# ax[2].plot(angularposition, producttraction[2, :], label = "product")
-# ax[2].plot(angularposition, parenttraction[2, :], label = "parent")
-# ax[2].plot(angularposition, exacttraction[2, :], "--", label = "exact")
-# ax[2].set_title("t2")
-# ax[2].legend()
-# ax[2].grid()
-# fig.tight_layout()
+# productdisplacementmagnitude =
+#     vec(mapslices(norm, productdisplacement, dims = 1))
+# parentdisplacementmagnitude = vec(mapslices(norm, parentdisplacement, dims = 1))
+# exactdisplacementmagnitude = vec(mapslices(norm, exactdisplacement, dims = 1))
+#
+# parentdisplacementerror =
+#     abs.(parentdisplacementmagnitude - exactdisplacementmagnitude) ./
+#     exactdisplacementmagnitude
+# productdisplacementerror =
+#     abs.(productdisplacementmagnitude - exactdisplacementmagnitude) ./
+#     exactdisplacementmagnitude
+#
+# fig, ax = PyPlot.subplots()
+# ax.plot(angularposition, parentdisplacementerror, label = "parent")
+# ax.plot(angularposition, productdisplacementerror, label = "product")
+# ax.legend()
+# ax.grid()
+# ax.set_ylim(0,0.15)
+# ax.set_xlim(0,90)
+# ax.set_title("DG + Merging: Displacement Error")
 # fig
-
-
-producttractionmagnitude = vec(mapslices(norm, producttraction, dims = 1))
-parenttractionmagnitude = vec(mapslices(norm, parenttraction, dims = 1))
-exacttractionmagnitude = vec(mapslices(norm, exacttraction, dims = 1))
-
-producttractionerror =
-    abs.(producttractionmagnitude - exacttractionmagnitude) ./
-    exacttractionmagnitude
-parenttractionerror =
-    abs.(parenttractionmagnitude - exacttractionmagnitude) ./
-    exacttractionmagnitude
-
-fig, ax = PyPlot.subplots()
-ax.plot(angularposition, parenttractionerror, label = "parent")
-ax.plot(angularposition, producttractionerror, label = "product")
-ax.legend()
-ax.grid()
-ax.set_xlim(0,90)
-ax.set_ylim(0,10.0)
-ax.set_title("DG + Merging: Traction Error")
-fig
-# fig.savefig(folderpath*filename*"-traction-error.png")
+# # fig.savefig(folderpath*filename*"-displacement-error.png")
+#
+#
+# productstress = product_stress_at_reference_points(
+#     nodaldisplacement,
+#     basis,
+#     stiffness,
+#     transfstress,
+#     theta0,
+#     referencepoints,
+#     referencecellids,
+#     mesh,
+# )
+# parentstress = parent_stress_at_reference_points(
+#     nodaldisplacement,
+#     basis,
+#     stiffness,
+#     referencepoints,
+#     referencecellids,
+#     mesh,
+# )
+# exactstress =
+#     mapslices(x -> exact_stress(analyticalsolution, x), spatialpoints, dims = 1)
+#
+# producttraction = CutCellDG.traction_force_at_points(productstress, normals)
+# parenttraction = CutCellDG.traction_force_at_points(parentstress, normals)
+# exacttraction = CutCellDG.traction_force_at_points(exactstress, normals)
+#
+# # fig, ax = PyPlot.subplots(2, 1)
+# # ax[1].plot(angularposition, producttraction[1, :], label = "product")
+# # ax[1].plot(angularposition, parenttraction[1, :], label = "parent")
+# # ax[1].plot(angularposition, exacttraction[1, :], "--", label = "exact")
+# # ax[1].set_title("t1")
+# # ax[1].legend()
+# # ax[1].grid()
+# # ax[2].plot(angularposition, producttraction[2, :], label = "product")
+# # ax[2].plot(angularposition, parenttraction[2, :], label = "parent")
+# # ax[2].plot(angularposition, exacttraction[2, :], "--", label = "exact")
+# # ax[2].set_title("t2")
+# # ax[2].legend()
+# # ax[2].grid()
+# # fig.tight_layout()
+# # fig
+#
+#
+# producttractionmagnitude = vec(mapslices(norm, producttraction, dims = 1))
+# parenttractionmagnitude = vec(mapslices(norm, parenttraction, dims = 1))
+# exacttractionmagnitude = vec(mapslices(norm, exacttraction, dims = 1))
+#
+# producttractionerror =
+#     abs.(producttractionmagnitude - exacttractionmagnitude) ./
+#     exacttractionmagnitude
+# parenttractionerror =
+#     abs.(parenttractionmagnitude - exacttractionmagnitude) ./
+#     exacttractionmagnitude
+#
+# fig, ax = PyPlot.subplots()
+# ax.plot(angularposition, parenttractionerror, label = "parent")
+# ax.plot(angularposition, producttractionerror, label = "product")
+# ax.legend()
+# ax.grid()
+# ax.set_xlim(0,90)
+# ax.set_ylim(0,10.0)
+# ax.set_title("DG + Merging: Traction Error")
+# fig
+# # fig.savefig(folderpath*filename*"-traction-error.png")

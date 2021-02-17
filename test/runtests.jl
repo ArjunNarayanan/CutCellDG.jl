@@ -40,11 +40,13 @@ end
     include("test_simple_tension.jl")
     include("test_cut_simple_tension.jl")
     include("test_merged_simple_tension.jl")
+    include("test_transformation_strain_simple_tension.jl")
+    include("test_incoherent_interface_simple_tension.jl")
 end
 
 @safetestset "Test Coherent Interface Convergence" begin
-    include("test_vertical_plane_interface_convergence.jl")
-    include("test_inclined_plane_interface_convergence.jl")
+    # include("test_vertical_plane_interface_convergence.jl")
+    # include("test_inclined_plane_interface_convergence.jl")
     include("test_curved_interface_convergence.jl")
     include("test_stress_convergence.jl")
 end
@@ -54,13 +56,17 @@ end
     include("test_mixed_bc_convergence.jl")
 end
 
-@safetestset "Test Incoherent Interface Simple Tension" begin
-    include("test_incoherent_interface_simple_tension.jl")
-end
 
-@safetestset "Test Transformation Strain" begin
-    include("test_transformation_strain_simple_tension.jl")
+@safetestset "Test Coherent Interface Transformation Strain L2-norm Displacement Convergence" begin
     include("test_transformation_strain_displacement_convergence.jl")
     include("test_transformation_strain_displacement_traction_bc_convergence.jl")
     include("test_transformation_strain_mixed_bc_convergence.jl")
+end
+
+@safetestset "Test Coherent Interface Maxnorm Displacement Convergence" begin
+    include("test_transformation_strain_interface_displacement_maxnorm_convergence.jl")
+end
+
+@safetestset "Test Coherent Interface Transformation Strain L2-norm Stress Convergence" begin
+    include("test_transformation_strain_L2_stress_convergence.jl")
 end

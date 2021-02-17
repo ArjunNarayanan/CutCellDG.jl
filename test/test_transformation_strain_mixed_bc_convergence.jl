@@ -194,8 +194,11 @@ function displacement_error(
     nelmts,
     polyorder,
     numqp,
-    penaltyfactor,
+    penaltyfactor;
+    eta = +1
 )
+    L = W = width
+    
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
     transfstress =
@@ -239,7 +242,6 @@ function displacement_error(
         interfacequads,
     )
     quadareas = CutCellDG.quadrature_areas(cellquads, cutmesh)
-    # @assert hasmergedcells
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
 
@@ -431,8 +433,8 @@ dx = 1.0 ./ nelmts
 u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+u1rate = convergence_rate(dx, u1err)
+u2rate = convergence_rate(dx, u2err)
 
 @test all(u1rate .> 2.8)
 @test all(u2rate .> 2.8)
@@ -477,8 +479,8 @@ dx = 1.0 ./ nelmts
 u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+u1rate = convergence_rate(dx, u1err)
+u2rate = convergence_rate(dx, u2err)
 
 @test all(u1rate .> 3.8)
 @test all(u2rate .> 3.8)
