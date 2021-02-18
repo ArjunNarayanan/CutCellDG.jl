@@ -3,48 +3,8 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
-
-function displacement(alpha, x)
-    u1 = alpha * x[2] * sin(pi * x[1])
-    u2 = alpha * (x[1]^3 + cos(pi * x[2]))
-    return [u1, u2]
-end
-
-function stress_field(lambda, mu, alpha, x)
-    s11 =
-        (lambda + 2mu) * alpha * pi * x[2] * cos(pi * x[1]) -
-        lambda * alpha * pi * sin(pi * x[2])
-    s22 =
-        -(lambda + 2mu) * alpha * pi * sin(pi * x[2]) +
-        lambda * alpha * pi * x[2] * cos(pi * x[1])
-    s12 = alpha * mu * (3x[1]^2 + sin(pi * x[1]))
-    return [s11, s22, s12]
-end
-
-function body_force(lambda, mu, alpha, x)
-    b1 = alpha * (lambda + 2mu) * pi^2 * x[2] * sin(pi * x[1])
-    b2 =
-        -alpha * (6mu * x[1] + (lambda + mu) * pi * cos(pi * x[1])) +
-        alpha * (lambda + 2mu) * pi^2 * cos(pi * x[2])
-    return [b1, b2]
-end
-
-function onleftboundary(x, L, W)
-    return x[1] ≈ 0.0
-end
-
-function onbottomboundary(x, L, W)
-    return x[2] ≈ 0.0
-end
-
-function onrightboundary(x, L, W)
-    return x[1] ≈ L
-end
-
-function ontopboundary(x, L, W)
-    return x[2] ≈ W
-end
+include("../useful_routines.jl")
+include("test_problem_and_solver.jl")
 
 function error_for_curved_interface(
     xc,
@@ -64,29 +24,15 @@ function error_for_curved_interface(
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
     basis = TensorProductBasis(2, polyorder)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
-        x -> circle_distance_function(x, xc, radius),
-        mesh,
-    )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-    )
-    @assert hasmergedcells
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh, cellquads, facequads, interfacequads =
+        construct_mesh_and_quadratures(
+            [L, W],
+            nelmts,
+            basis,
+            x -> circle_distance_function(x, xc, radius),
+            numqp,
+        )
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
@@ -200,67 +146,75 @@ function error_for_curved_interface(
     )
 end
 
-xc = [1.0, 0.5]
-radius = 0.45
-polyorder = 2
-penaltyfactor = 1e2
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-numqp = required_quadrature_order(polyorder) + 2
-nelmts = [2^p + 1 for p in powers]
-eta = 1
 
-err = [
-    error_for_curved_interface(
-        xc,
-        radius,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-        eta,
-    ) for ne in nelmts
-]
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
-dx = 1.0 ./ nelmts
+function test_mixed_bc_edge_intersecting_curved_interface()
+    xc = [1.0, 0.5]
+    radius = 0.45
+    polyorder = 2
+    penaltyfactor = 1e2
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
+    numqp = required_quadrature_order(polyorder) + 2
+    nelmts = [2^p + 1 for p in powers]
+    eta = 1
 
-u1rate = diff(log.(u1err)) ./ diff(log.(dx))
-u2rate = diff(log.(u2err)) ./ diff(log.(dx))
+    err = [
+        error_for_curved_interface(
+            xc,
+            radius,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+            eta,
+        ) for ne in nelmts
+    ]
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
+    dx = 1.0 ./ nelmts
 
-@test all(u1rate .> 2.95)
-@test all(u2rate .> 2.95)
+    u1rate = diff(log.(u1err)) ./ diff(log.(dx))
+    u2rate = diff(log.(u2err)) ./ diff(log.(dx))
+
+    @test all(u1rate .> 2.95)
+    @test all(u2rate .> 2.95)
+end
 
 
 
+function test_mixed_bc_circular_interface()
+    xc = [0.3, 0.7]
+    radius = 0.15
+    polyorder = 3
+    penaltyfactor = 1e2
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
+    numqp = required_quadrature_order(polyorder) + 2
+    nelmts = [2^p + 1 for p in powers]
+    eta = 1
 
-xc = [0.3, 0.7]
-radius = 0.15
-polyorder = 3
-penaltyfactor = 1e2
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-numqp = required_quadrature_order(polyorder) + 2
-nelmts = [2^p + 1 for p in powers]
-eta = 1
+    err = [
+        error_for_curved_interface(
+            xc,
+            radius,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+            eta,
+        ) for ne in nelmts
+    ]
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
+    dx = 1.0 ./ nelmts
 
-err = [
-    error_for_curved_interface(
-        xc,
-        radius,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-        eta,
-    ) for ne in nelmts
-]
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
-dx = 1.0 ./ nelmts
+    u1rate = convergence_rate(dx, u1err)
+    u2rate = convergence_rate(dx, u2err)
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+    @test all(u1rate .> 3.95)
+    @test all(u2rate .> 3.95)
+end
 
-@test all(u1rate .> 3.95)
-@test all(u2rate .> 3.95)
+
+test_mixed_bc_edge_intersecting_curved_interface()
+test_mixed_bc_circular_interface()

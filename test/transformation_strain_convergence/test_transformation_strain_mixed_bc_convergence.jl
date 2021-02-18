@@ -3,7 +3,7 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 function bulk_modulus(l, m)
     return l + 2m / 3
@@ -195,10 +195,10 @@ function displacement_error(
     polyorder,
     numqp,
     penaltyfactor;
-    eta = +1
+    eta = +1,
 )
     L = W = width
-    
+
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
     transfstress =
@@ -395,92 +395,96 @@ end
 
 
 
+function test_mixed_bc_transformation_strain_circular_interface()
+    lambda1, mu1 = 100.0, 80.0
+    lambda2, mu2 = 80.0, 60.0
+    theta0 = -0.067
+    stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
-lambda1, mu1 = 100.0, 80.0
-lambda2, mu2 = 80.0, 60.0
-theta0 = -0.067
-stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
+    width = 1.0
+    penaltyfactor = 1e3
 
-width = 1.0
-penaltyfactor = 1e3
+    polyorder = 2
+    numqp = required_quadrature_order(polyorder) + 2
 
-polyorder = 2
-numqp = required_quadrature_order(polyorder) + 2
+    center = [width / 2, width / 2]
+    inradius = width / 4
+    outradius = width
 
-center = [width / 2, width / 2]
-inradius = width / 4
-outradius = width
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
+    err = [
+        displacement_error(
+            width,
+            center,
+            inradius,
+            outradius,
+            stiffness,
+            theta0,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
 
-err = [
-    displacement_error(
-        width,
-        center,
-        inradius,
-        outradius,
-        stiffness,
-        theta0,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
+    dx = 1.0 ./ nelmts
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
 
-dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
+    u1rate = convergence_rate(dx, u1err)
+    u2rate = convergence_rate(dx, u2err)
 
-u1rate = convergence_rate(dx, u1err)
-u2rate = convergence_rate(dx, u2err)
-
-@test all(u1rate .> 2.8)
-@test all(u2rate .> 2.8)
+    @test all(u1rate .> 2.8)
+    @test all(u2rate .> 2.8)
+end
 
 
+function test_mixed_bc_transformation_strain_corner_interface()
+    lambda1, mu1 = 100.0, 80.0
+    lambda2, mu2 = 80.0, 60.0
+    theta0 = -0.067
+    stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
+    width = 1.0
+    penaltyfactor = 1e3
 
-lambda1, mu1 = 100.0, 80.0
-lambda2, mu2 = 80.0, 60.0
-theta0 = -0.067
-stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
+    polyorder = 3
+    numqp = required_quadrature_order(polyorder) + 2
 
-width = 1.0
-penaltyfactor = 1e3
+    center = [width, width]
+    inradius = width / 2
+    outradius = 2width
 
-polyorder = 3
-numqp = required_quadrature_order(polyorder) + 2
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-center = [width, width]
-inradius = width / 2
-outradius = 2width
+    err = [
+        displacement_error(
+            width,
+            center,
+            inradius,
+            outradius,
+            stiffness,
+            theta0,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
 
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
+    dx = 1.0 ./ nelmts
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
 
-err = [
-    displacement_error(
-        width,
-        center,
-        inradius,
-        outradius,
-        stiffness,
-        theta0,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
+    u1rate = convergence_rate(dx, u1err)
+    u2rate = convergence_rate(dx, u2err)
 
-dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
+    @test all(u1rate .> 3.8)
+    @test all(u2rate .> 3.8)
+end
 
-u1rate = convergence_rate(dx, u1err)
-u2rate = convergence_rate(dx, u2err)
-
-@test all(u1rate .> 3.8)
-@test all(u2rate .> 3.8)
+test_mixed_bc_transformation_strain_circular_interface()
+test_mixed_bc_transformation_strain_corner_interface()

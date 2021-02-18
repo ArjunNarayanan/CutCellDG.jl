@@ -3,38 +3,17 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
+include("test_problem_and_solver.jl")
 
-function displacement(alpha, x)
-    u1 = alpha * x[2] * sin(pi * x[1])
-    u2 = alpha * (x[1]^3 + cos(pi * x[2]))
-    return [u1, u2]
-end
-
-function stress_field(lambda, mu, alpha, x)
-    s11 =
-        (lambda + 2mu) * alpha * pi * x[2] * cos(pi * x[1]) -
-        lambda * alpha * pi * sin(pi * x[2])
-    s22 =
-        -(lambda + 2mu) * alpha * pi * sin(pi * x[2]) +
-        lambda * alpha * pi * x[2] * cos(pi * x[1])
-    s12 = alpha * mu * (3x[1]^2 + sin(pi * x[1]))
-    return [s11, s22, s12]
-end
-
-function body_force(lambda, mu, alpha, x)
-    b1 = alpha * (lambda + 2mu) * pi^2 * x[2] * sin(pi * x[1])
-    b2 =
-        -alpha * (6mu * x[1] + (lambda + mu) * pi * cos(pi * x[1])) +
-        alpha * (lambda + 2mu) * pi^2 * cos(pi * x[2])
-    return [b1, b2]
-end
-
-function onboundary(x, L, W)
-    return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
-end
-
-function compute_stress_error(distancefunc, nelmts, polyorder, numqp, penaltyfactor; eta = +1)
+function compute_stress_error(
+    distancefunc,
+    nelmts,
+    polyorder,
+    numqp,
+    penaltyfactor;
+    eta = +1,
+)
     L = 1.0
     W = 1.0
     lambda, mu = 1.0, 2.0
@@ -44,26 +23,15 @@ function compute_stress_error(distancefunc, nelmts, polyorder, numqp, penaltyfac
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
     basis = TensorProductBasis(2, polyorder)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(distancefunc, mesh)
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-    )
-    @assert hasmergedcells
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh, cellquads, facequads, interfacequads =
+        construct_mesh_and_quadratures(
+            [L, W],
+            nelmts,
+            basis,
+            distancefunc,
+            numqp,
+        )
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
@@ -183,7 +151,7 @@ function stress_L2_error(
             celldofs = CutCellDG.element_dofs(nodeids, dim)
             celldisp = nodaldisplacement[celldofs]
             quad = cellquads[-1, cellid]
-            cellmap = CutCellDG.cell_map(mesh,-1,cellid)
+            cellmap = CutCellDG.cell_map(mesh, -1, cellid)
 
             update_cell_stress_error!(
                 err,
@@ -204,7 +172,7 @@ function stress_L2_error(
             celldofs = CutCellDG.element_dofs(nodeids, dim)
             celldisp = nodaldisplacement[celldofs]
             quad = cellquads[+1, cellid]
-            cellmap = CutCellDG.cell_map(mesh,+1,cellid)
+            cellmap = CutCellDG.cell_map(mesh, +1, cellid)
 
             update_cell_stress_error!(
                 err,
@@ -225,49 +193,61 @@ end
 
 
 
+function test_stress_convergence_edge_intersecting_curved_interface()
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
+    dx = 1.0 ./ nelmts
+    interface_center = [1.0, 0.5]
+    interface_radius = 0.45
+    polyorder = 2
+    numqp = required_quadrature_order(polyorder) + 2
+    penaltyfactor = 1e3
+    err = [
+        compute_stress_error(
+            x -> circle_distance_function(
+                x,
+                interface_center,
+                interface_radius,
+            ),
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
+    serr = [[er[i] for er in err] for i = 1:3]
+    rates = [convergence_rate(dx, v) for v in serr]
+    @test all([all(rates[i] .> 1.95) for i = 1:3])
+end
 
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-dx = 1.0 ./ nelmts
-interface_center = [1.0, 0.5]
-interface_radius = 0.45
-polyorder = 2
-numqp = required_quadrature_order(polyorder) + 2
-penaltyfactor = 1e3
-err = [
-    compute_stress_error(
-        x -> circle_distance_function(x, interface_center, interface_radius),
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
-serr = [[er[i] for er in err] for i = 1:3]
-rates = [convergence_rate(dx, v) for v in serr]
-@test all([all(rates[i] .> 1.95) for i = 1:3])
 
 
+function test_stress_convergence_circular_interface()
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
+    dx = 1.0 ./ nelmts
+    interface_center = [0.3, 0.8]
+    interface_radius = 0.15
+    polyorder = 2
+    numqp = required_quadrature_order(polyorder) + 2
+    penaltyfactor = 1e2
+    err = [
+        compute_stress_error(
+            x -> circle_distance_function(
+                x,
+                interface_center,
+                interface_radius,
+            ),
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
+    serr = [[er[i] for er in err] for i = 1:3]
+    rates = [convergence_rate(dx, v) for v in serr]
+    @test all([all(rates[i] .> 1.95) for i = 1:3])
+end
 
-
-
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-dx = 1.0 ./ nelmts
-interface_center = [0.3, 0.8]
-interface_radius = 0.15
-polyorder = 2
-numqp = required_quadrature_order(polyorder) + 2
-penaltyfactor = 1e2
-err = [
-    compute_stress_error(
-        x -> circle_distance_function(x, interface_center, interface_radius),
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
-serr = [[er[i] for er in err] for i = 1:3]
-rates = [convergence_rate(dx, v) for v in serr]
-@test all([all(rates[i] .> 1.95) for i = 1:3])
+test_stress_convergence_edge_intersecting_curved_interface()
+test_stress_convergence_circular_interface()

@@ -3,23 +3,12 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 function displacement(alpha, x)
     u1 = alpha * x[2] * sin(pi * x[1])
     u2 = alpha * (x[1]^3 + cos(pi * x[2]))
     return [u1, u2]
-end
-
-function stress_field(lambda, mu, alpha, x)
-    s11 =
-        (lambda + 2mu) * alpha * pi * x[2] * cos(pi * x[1]) -
-        lambda * alpha * pi * sin(pi * x[2])
-    s22 =
-        -(lambda + 2mu) * alpha * pi * sin(pi * x[2]) +
-        lambda * alpha * pi * x[2] * cos(pi * x[1])
-    s12 = alpha * mu * (3x[1]^2 + sin(pi * x[1]))
-    return [s11, s22, s12]
 end
 
 function body_force(lambda, mu, alpha, x)
@@ -30,17 +19,13 @@ function body_force(lambda, mu, alpha, x)
     return [b1, b2]
 end
 
-function ondisplacementboundary(x, L, W)
-    return x[2] ≈ 0.0 || x[2] ≈ W || x[1] ≈ 0.0
+function onboundary(x, L, W)
+    return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
 end
 
-function ontractionboundary(x, L, W)
-    return x[1] ≈ L
-end
-
-function error_for_curved_interface(
-    xc,
-    radius,
+function error_for_plane_interface(
+    x0,
+    normal,
     nelmts,
     polyorder,
     numqp,
@@ -59,7 +44,7 @@ function error_for_curved_interface(
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
     levelset = InterpolatingPolynomial(1, basis)
     levelsetcoeffs = CutCellDG.levelset_coefficients(
-        x -> circle_distance_function(x, xc, radius),
+        x -> plane_distance_function(x, normal, x0),
         mesh,
     )
 
@@ -77,7 +62,6 @@ function error_for_curved_interface(
         facequads,
         interfacequads,
     )
-    @assert hasmergedcells
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
     sysmatrix = CutCellDG.SystemMatrix()
@@ -116,16 +100,8 @@ function error_for_curved_interface(
         facequads,
         stiffness,
         mergedmesh,
-        x -> ondisplacementboundary(x, L, W),
+        x -> onboundary(x, L, W),
         penalty,
-    )
-    CutCellDG.assemble_traction_force_linear_form!(
-        sysrhs,
-        x -> stress_field(lambda, mu, alpha, x)[[1, 3]],
-        basis,
-        facequads,
-        mergedmesh,
-        x -> ontractionboundary(x, L, W),
     )
     CutCellDG.assemble_body_force!(
         sysrhs,
@@ -151,20 +127,20 @@ function error_for_curved_interface(
 end
 
 
-xc = [1.0, 0.5]
-radius = 0.45
-polyorder = 2
-penaltyfactor = 1e2
+
+x0 = [0.5, 0.0]
+normal = [1.0, 0.0]
 powers = [3, 4, 5]
 nelmts = [2^p + 1 for p in powers]
-numqp = required_quadrature_order(polyorder) + 2
-nelmts = [2^p + 1 for p in powers]
+polyorder = 1
+numqp = required_quadrature_order(polyorder)
+penaltyfactor = 1e2
 eta = 1
 
 err = [
-    error_for_curved_interface(
-        xc,
-        radius,
+    error_for_plane_interface(
+        x0,
+        normal,
         ne,
         polyorder,
         numqp,
@@ -172,48 +148,49 @@ err = [
         eta,
     ) for ne in nelmts
 ]
+
 u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
+
 dx = 1.0 ./ nelmts
-
-u1rate = diff(log.(u1err)) ./ diff(log.(dx))
-u2rate = diff(log.(u2err)) ./ diff(log.(dx))
-
-@test all(u1rate .> 2.95)
-@test all(u2rate .> 2.95)
-
-
-
-
-
-
-xc = [0.3, 0.7]
-radius = 0.2
-polyorder = 2
-penaltyfactor = 1e2
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
-numqp = required_quadrature_order(polyorder) + 2
-nelmts = [2^p + 1 for p in powers]
-eta = 1
-
-err = [
-    error_for_curved_interface(
-        xc,
-        radius,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-        eta,
-    ) for ne in nelmts
-]
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
-dx = 1.0 ./ nelmts
-
 u1rate = convergence_rate(dx,u1err)
 u2rate = convergence_rate(dx,u2err)
 
-@test all(u1rate .> 2.95)
-@test all(u2rate .> 2.95)
+@test allapprox(u1rate, repeat([2.0], length(u1rate)), 0.1)
+@test allapprox(u1rate, repeat([2.0], length(u2rate)), 0.1)
+
+
+
+
+
+
+x0 = [0.5, 0.0]
+normal = [1.0, 0.0]
+powers = [3, 4, 5]
+nelmts = [2^p + 1 for p in powers]
+polyorder = 2
+numqp = required_quadrature_order(polyorder)
+penaltyfactor = 1e2
+eta = 1
+
+err = [
+    error_for_plane_interface(
+        x0,
+        normal,
+        ne,
+        polyorder,
+        numqp,
+        penaltyfactor,
+        eta,
+    ) for ne in nelmts
+]
+
+u1err = [er[1] for er in err]
+u2err = [er[2] for er in err]
+
+dx = 1.0 ./ nelmts
+u1rate = convergence_rate(dx,u1err)
+u2rate = convergence_rate(dx,u2err)
+
+@test allapprox(u1rate, repeat([3.0], length(u1rate)), 0.05)
+@test allapprox(u1rate, repeat([3.0], length(u2rate)), 0.05)

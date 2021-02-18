@@ -3,7 +3,7 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 x0 = [0.0, 0.0]
 widths = [4.0, 1.0]

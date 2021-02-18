@@ -3,7 +3,7 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 function bulk_modulus(l, m)
     return l + 2m / 3
@@ -98,100 +98,8 @@ function (A::AnalyticalSolution)(x)
     end
 end
 
-function shell_radial_stress(ls, ms, theta0, A1, A2, r)
-    return (ls + 2ms) * (A1 - A2 / r^2) + ls * (A1 + A2 / r^2) -
-           (ls + 2ms / 3) * theta0
-end
-
-function shell_circumferential_stress(ls, ms, theta0, A1, A2, r)
-    return ls * (A1 - A2 / r^2) + (ls + 2ms) * (A1 + A2 / r^2) -
-           (ls + 2ms / 3) * theta0
-end
-
-function shell_out_of_plane_stress(ls, ms, A1, theta0)
-    return 2 * ls * A1 - (ls + 2ms / 3) * theta0
-end
-
-function core_in_plane_stress(lc, mc, A1)
-    return (lc + 2mc) * A1 + lc * A1
-end
-
-function core_out_of_plane_stress(lc, A1)
-    return 2 * lc * A1
-end
-
-function rotation_matrix(x, r)
-    costheta = x[1] / r
-    sintheta = x[2] / r
-    Q = [
-        costheta -sintheta
-        sintheta costheta
-    ]
-    return Q
-end
-
-function shell_stress(A::AnalyticalSolution, x)
-    relpos = x - A.center
-    r = sqrt(relpos' * relpos)
-    Q = rotation_matrix(relpos, r)
-
-    srr = shell_radial_stress(A.ls, A.ms, A.theta0, A.A1s, A.A2s, r)
-    stt = shell_circumferential_stress(A.ls, A.ms, A.theta0, A.A1s, A.A2s, r)
-
-    cylstress = [
-        srr 0.0
-        0.0 stt
-    ]
-
-    cartstress = Q * cylstress * Q'
-    s11 = cartstress[1, 1]
-    s22 = cartstress[2, 2]
-    s12 = cartstress[1, 2]
-    s33 = shell_out_of_plane_stress(A.ls, A.ms, A.A1s, A.theta0)
-
-    return [s11, s22, s12, s33]
-end
-
-function core_stress(A::AnalyticalSolution)
-    s11 = core_in_plane_stress(A.lc, A.mc, A.A1c)
-    s33 = core_out_of_plane_stress(A.lc, A.A1c)
-    return [s11, s11, 0.0, s33]
-end
-
-function exact_stress(A::AnalyticalSolution, x)
-    relpos = x - A.center
-    r = sqrt(relpos' * relpos)
-    if r < A.inradius
-        return core_stress(A)
-    else
-        return shell_stress(A, x)
-    end
-end
-
-function onleftboundary(x, L, W)
-    return x[1] ≈ 0.0
-end
-
-function onbottomboundary(x, L, W)
-    return x[2] ≈ 0.0
-end
-
-function onrightboundary(x, L, W)
-    return x[1] ≈ L
-end
-
-function ontopboundary(x, L, W)
-    return x[2] ≈ W
-end
-
-function ondisplacementboundary(x, L, W)
-    return onleftboundary(x, L, W) ||
-           onbottomboundary(x, L, W) ||
-           ontopboundary(x, L, W)
-end
-
-function ontractionboundary(x, L, W)
-    return onrightboundary(x, L, W)
+function onboundary(x, L, W)
+    return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
 end
 
 function displacement_error(
@@ -205,10 +113,10 @@ function displacement_error(
     polyorder,
     numqp,
     penaltyfactor;
-    eta = +1
+    eta = +1,
 )
     L = W = width
-    
+
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
     transfstress =
@@ -315,7 +223,7 @@ function displacement_error(
         facequads,
         stiffness,
         mergedmesh,
-        x -> ondisplacementboundary(x, L, W),
+        x -> onboundary(x, L, W),
         penalty,
     )
     CutCellDG.assemble_penalty_displacement_transformation_linear_form!(
@@ -324,16 +232,7 @@ function displacement_error(
         basis,
         facequads,
         mergedmesh,
-        x -> ondisplacementboundary(x, L, W),
-    )
-
-    CutCellDG.assemble_traction_force_linear_form!(
-        sysrhs,
-        x -> exact_stress(analyticalsolution, x)[[1, 3]],
-        basis,
-        facequads,
-        mergedmesh,
-        x -> ontractionboundary(x, L, W),
+        x -> onboundary(x, L, W),
     )
 
     matrix = CutCellDG.sparse_displacement_operator(sysmatrix, mergedmesh)
@@ -354,78 +253,96 @@ function displacement_error(
 end
 
 
-lambda1, mu1 = 100.0, 80.0
-lambda2, mu2 = 80.0, 60.0
-theta0 = -0.067
-stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
-width = 1.0
-penaltyfactor = 1e3
+function test_circular_interface()
+    lambda1, mu1 = 100.0, 80.0
+    lambda2, mu2 = 80.0, 60.0
+    theta0 = -0.067
+    stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
-polyorder = 2
-numqp = required_quadrature_order(polyorder) + 2
+    width = 1.0
+    penaltyfactor = 1e3
 
-center = [width / 2, width / 2]
-inradius = width / 4
-outradius = width
+    polyorder = 2
+    numqp = required_quadrature_order(polyorder) + 2
 
-powers = [3, 4, 5]
-nelmts = [2^p + 1 for p in powers]
+    center = [width / 2, width / 2]
+    inradius = width / 4
+    outradius = width
 
-err = [
-    displacement_error(
-        width,
-        center,
-        inradius,
-        outradius,
-        stiffness,
-        theta0,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
+    err = [
+        displacement_error(
+            width,
+            center,
+            inradius,
+            outradius,
+            stiffness,
+            theta0,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+    dx = 1.0 ./ nelmts
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
 
-@test all(u1rate .> 2.8)
-@test all(u2rate .> 2.8)
+    u1rate = convergence_rate(dx, u1err)
+    u2rate = convergence_rate(dx, u2err)
+
+    @test all(u1rate .> 2.8)
+    @test all(u2rate .> 2.8)
+end
 
 
+function test_corner_curved_interface()
+    lambda1, mu1 = 100.0, 80.0
+    lambda2, mu2 = 80.0, 60.0
+    theta0 = -0.067
+    stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
 
-center = [width, width]
-inradius = width / 2
-outradius = 2width
-powers = [3,4,5]
-nelmts = [2^p + 1 for p in powers]
+    width = 1.0
+    penaltyfactor = 1e3
 
-err = [
-    displacement_error(
-        width,
-        center,
-        inradius,
-        outradius,
-        stiffness,
-        theta0,
-        ne,
-        polyorder,
-        numqp,
-        penaltyfactor,
-    ) for ne in nelmts
-]
+    polyorder = 2
+    numqp = required_quadrature_order(polyorder) + 2
 
-dx = 1.0 ./ nelmts
-u1err = [er[1] for er in err]
-u2err = [er[2] for er in err]
+    center = [width, width]
+    inradius = width / 2
+    outradius = 2width
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+    err = [
+        displacement_error(
+            width,
+            center,
+            inradius,
+            outradius,
+            stiffness,
+            theta0,
+            ne,
+            polyorder,
+            numqp,
+            penaltyfactor,
+        ) for ne in nelmts
+    ]
 
-@test all(u1rate .> 2.9)
-@test all(u2rate .> 2.9)
+    dx = 1.0 ./ nelmts
+    u1err = [er[1] for er in err]
+    u2err = [er[2] for er in err]
+
+    u1rate = convergence_rate(dx, u1err)
+    u2rate = convergence_rate(dx, u2err)
+
+    @test all(u1rate .> 2.9)
+    @test all(u2rate .> 2.9)
+end
+
+test_circular_interface()
+test_corner_curved_interface()

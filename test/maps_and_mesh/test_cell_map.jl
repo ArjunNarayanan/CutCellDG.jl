@@ -2,7 +2,7 @@ using Test
 using CartesianMesh
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 cm = CutCellDG.CellMap([0.,2.],[3.,3.])
 @test CutCellDG.dimension(cm) == 2
