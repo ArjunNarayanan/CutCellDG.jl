@@ -7,14 +7,23 @@ function comment_using_revise(filename)
         lines[idx] = "# using Revise"
         open(filename, "w") do f
             for l in lines
-                println(f,l)
+                println(f, l)
             end
         end
     end
 end
 
-testfiles = filter(x->startswith(x,"test_"),readdir("test"))
-testfiles = ["test/"*s for s in testfiles]
-for f in testfiles
-    comment_using_revise(f)
+function process_folder(folderpath)
+    testfiles = filter(x -> startswith(x, "test_"), readdir(folderpath))
+    testfiles = (folderpath*"/") .* testfiles
+    for f in testfiles
+        comment_using_revise(f)
+    end
+end
+
+foldernames = filter(x->isdir("test/"*x), readdir("test"))
+folderpaths = "test/" .* foldernames
+
+for path in folderpaths
+    process_folder(path)
 end

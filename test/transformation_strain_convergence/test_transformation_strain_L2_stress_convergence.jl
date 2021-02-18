@@ -1,12 +1,12 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 include("circular_bc_transformation_elasticity_solver.jl")
 
-function compute_L2_stress_error(polyorder,nelmts,width)
+function compute_L2_stress_error(polyorder, nelmts, width)
     K1, K2 = 247.0, 192.0    # Pa
     mu1, mu2 = 126.0, 87.0   # Pa
     lambda1 = lame_lambda(K1, mu1)
@@ -68,8 +68,8 @@ function compute_L2_stress_error(polyorder,nelmts,width)
         transfstress,
         theta0,
         mesh,
-        x->core_stress(analyticalsolution),
-        x->shell_stress(analyticalsolution,x)
+        x -> core_stress(analyticalsolution),
+        x -> shell_stress(analyticalsolution, x),
     )
 
     den = integral_norm_on_mesh(
@@ -84,52 +84,35 @@ function compute_L2_stress_error(polyorder,nelmts,width)
     return normalizedstresserr
 end
 
-width = 1.0
-polyorder = 2
-powers = [3,4,5]
-nelmts = [2^p+1 for p in powers]
+function test_quadratic_elements()
+    width = 1.0
+    polyorder = 2
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-err = [compute_L2_stress_error(polyorder,ne,width) for ne in nelmts]
+    err = [compute_L2_stress_error(polyorder, ne, width) for ne in nelmts]
 
-s11err = [er[1] for er in err]
-s22err = [er[2] for er in err]
-s12err = [er[3] for er in err]
-s33err = [er[4] for er in err]
+    stresserror = Array(transpose(hcat(err...)))
+    dx = width ./ nelmts
+    stressrates = mapslices(x -> convergence_rate(dx, x), stresserror, dims = 1)
 
-dx = width ./ nelmts
+    @test all(stressrates .> 1.8)
+end
 
-s11rate = convergence_rate(dx,s11err)
-s22rate = convergence_rate(dx,s22err)
-s12rate = convergence_rate(dx,s12err)
-s33rate = convergence_rate(dx,s33err)
+function test_cubic_elements()
+    width = 1.0
+    polyorder = 3
+    powers = [3, 4, 5]
+    nelmts = [2^p + 1 for p in powers]
 
-@test all(s11rate .> 1.8)
-@test all(s22rate .> 1.8)
-@test all(s12rate .> 1.8)
-@test all(s33rate .> 1.8)
+    err = [compute_L2_stress_error(polyorder, ne, width) for ne in nelmts]
 
+    dx = width ./ nelmts
+    stresserror = Array(transpose(hcat(err...)))
 
+    stressrates = mapslices(x -> convergence_rate(dx, x), stresserror, dims = 1)
+    @test all(stressrates .> 2.7)
+end
 
-# width = 1.0
-# polyorder = 3
-# powers = [3,4,5]
-# nelmts = [2^p+1 for p in powers]
-#
-# err = [compute_L2_stress_error(polyorder,ne,width) for ne in nelmts]
-#
-# s11err = [er[1] for er in err]
-# s22err = [er[2] for er in err]
-# s12err = [er[3] for er in err]
-# s33err = [er[4] for er in err]
-#
-# dx = width ./ nelmts
-#
-# s11rate = convergence_rate(dx,s11err)
-# s22rate = convergence_rate(dx,s22err)
-# s12rate = convergence_rate(dx,s12err)
-# s33rate = convergence_rate(dx,s33err)
-#
-# @test all(s11rate .> 2.7)
-# @test all(s22rate .> 2.7)
-# @test all(s12rate .> 2.7)
-# @test all(s33rate .> 2.7)
+test_quadratic_elements()
+test_cubic_elements()
