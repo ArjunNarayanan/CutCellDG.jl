@@ -19,11 +19,11 @@ function analytical_coefficient_matrix(inradius, outradius, ls, ms, lc, mc)
     return a
 end
 
-function analytical_coefficient_rhs(ls, ms, theta0, p0)
+function analytical_coefficient_rhs(ls, ms, theta0)
     r = zeros(3)
     Ks = bulk_modulus(ls, ms)
     r[2] = -Ks * theta0
-    r[3] = Ks * theta0 + p0
+    r[3] = Ks * theta0
     return r
 end
 
@@ -48,10 +48,9 @@ struct AnalyticalSolution
         lc,
         mc,
         theta0,
-        p0,
     )
         a = analytical_coefficient_matrix(inradius, outradius, ls, ms, lc, mc)
-        r = analytical_coefficient_rhs(ls, ms, theta0, p0)
+        r = analytical_coefficient_rhs(ls, ms, theta0)
         coeffs = a \ r
         new(
             inradius,
@@ -128,6 +127,14 @@ function rotation_matrix(x, r)
     return Q
 end
 
+function shell_radial_stress(A::AnalyticalSolution, r)
+    return shell_radial_stress(A.ls, A.ms, A.theta0, A.A1s, A.A2s, r)
+end
+
+function shell_circumferential_stress(A::AnalyticalSolution, r)
+    return shell_circumferential_stress(A.ls, A.ms, A.theta0, A.A1s, A.A2s, r)
+end
+
 function shell_stress(A::AnalyticalSolution, x)
     relpos = x - A.center
     r = sqrt(relpos' * relpos)
@@ -148,6 +155,10 @@ function shell_stress(A::AnalyticalSolution, x)
     s33 = shell_out_of_plane_stress(A.ls, A.ms, A.A1s, A.theta0)
 
     return [s11, s22, s12, s33]
+end
+
+function core_in_plane_stress(A::AnalyticalSolution)
+    return core_in_plane_stress(A.lc, A.mc, A.A1c)
 end
 
 function core_stress(A::AnalyticalSolution)
@@ -179,7 +190,7 @@ function nodal_displacement(
     eta = 1,
 )
 
-    L,W = CutCellDG.widths(mesh)
+    L, W = CutCellDG.widths(mesh)
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     transfstress =
         CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
@@ -221,7 +232,8 @@ function nodal_displacement(
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
         basis,
-        interfacequads, stiffness,
+        interfacequads,
+        stiffness,
         mesh,
         penalty,
         eta,
@@ -237,7 +249,7 @@ function nodal_displacement(
     CutCellDG.assemble_penalty_displacement_bc!(
         sysmatrix,
         sysrhs,
-        analyticalsolution,
+        boundarydisplacement,
         basis,
         facequads,
         stiffness,
@@ -268,14 +280,10 @@ function construct_mesh_and_quadratures(
     basis,
     interfacecenter,
     interfaceradius,
-    numqp
+    numqp;
+    tinyratio = 0.2,
 )
-    mesh = CutCellDG.DGMesh(
-        [0.0, 0.0],
-        meshwidth,
-        [nelmts,nelmts],
-        basis,
-    )
+    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 
     levelset = InterpolatingPolynomial(1, basis)
     levelsetcoeffs = CutCellDG.levelset_coefficients(
@@ -296,10 +304,38 @@ function construct_mesh_and_quadratures(
         cellquads,
         facequads,
         interfacequads,
+        tinyratio = tinyratio,
     )
     mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
 
     return mergedmesh, cellquads, facequads, interfacequads
+end
+
+function construct_unmerged_mesh_and_quadratures(
+    meshwidth,
+    nelmts,
+    basis,
+    interfacecenter,
+    interfaceradius,
+    numqp,
+)
+    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+
+    levelset = InterpolatingPolynomial(1, basis)
+    levelsetcoeffs = CutCellDG.levelset_coefficients(
+        x -> -circle_distance_function(x, interfacecenter, interfaceradius),
+        mesh,
+    )
+
+    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cellquads =
+        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    interfacequads =
+        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    facequads =
+        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+
+    return cutmesh, cellquads, facequads, interfacequads
 end
 
 
@@ -318,7 +354,10 @@ function product_stress(
     lambda, mu = CutCellDG.lame_coefficients(stiffness, +1)
 
     grad = CutCellDG.transform_gradient(gradient(basis, point), jac)
-    NK = sum([CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
+    NK = sum([
+        CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for
+        k = 1:dim
+    ])
     symmdispgrad = NK * celldisp
 
     inplanestress = (stiffness[+1] * symmdispgrad) - transfstress
@@ -387,7 +426,10 @@ function parent_stress(
     lambda, mu = CutCellDG.lame_coefficients(stiffness, -1)
 
     grad = CutCellDG.transform_gradient(gradient(basis, point), jac)
-    NK = sum([CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
+    NK = sum([
+        CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for
+        k = 1:dim
+    ])
     symmdispgrad = NK * celldisp
 
     inplanestress = stiffness[-1] * symmdispgrad

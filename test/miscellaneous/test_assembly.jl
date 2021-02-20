@@ -2,7 +2,7 @@ using Test
 using SparseArrays
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 
 @test CutCellDG.node_to_dof_id(9,1,2) == 17

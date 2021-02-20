@@ -25,15 +25,15 @@ end
 end
 
 @safetestset "Test Cell Merging" begin
-    include("test_cell_merging.jl")
+    include("miscellaneous/test_cell_merging.jl")
 end
 
 @safetestset "Test Hooke Stiffness" begin
-    include("test_hooke_stiffness.jl")
+    include("miscellaneous/test_hooke_stiffness.jl")
 end
 
 @safetestset "Test Assembly" begin
-    include("test_assembly.jl")
+    include("miscellaneous/test_assembly.jl")
 end
 
 @safetestset "Test Simple Tension" begin

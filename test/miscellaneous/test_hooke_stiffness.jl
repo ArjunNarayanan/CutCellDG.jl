@@ -1,7 +1,7 @@
 using Test
 # using Revise
 using CutCellDG
-include("useful_routines.jl")
+include("../useful_routines.jl")
 
 l,m = 1.,2.
 stiffness = CutCellDG.plane_strain_voigt_hooke_matrix(l,m)
