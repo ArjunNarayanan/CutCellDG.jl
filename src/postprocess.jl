@@ -62,10 +62,7 @@ function plane_strain_stress(
     dim = length(vectosymmconverter)
 
     grad = transform_gradient(gradient(basis, referencepoint), jac)
-    NK = sum([
-        make_row_matrix(vectosymmconverter[k], grad[:, k]) for
-        k = 1:dim
-    ])
+    NK = sum([make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
 
     symmdispgrad = NK * celldisp
 
@@ -128,45 +125,53 @@ function traction_force_at_points(stresses, normals)
     npts = size(stresses)[2]
     @assert size(normals)[2] == npts
 
-    tractionforce = zeros(2,npts)
+    tractionforce = zeros(2, npts)
     for i = 1:npts
-        tractionforce[:,i] .= traction_force(stresses[:,i],normals[:,i])
+        tractionforce[:, i] .= traction_force(stresses[:, i], normals[:, i])
     end
     return tractionforce
 end
 
 function pressure_at_points(stress)
-    return -1.0/3.0*(stress[1,:] + stress[2,:] + stress[4,:])
+    return -1.0 / 3.0 * (stress[1, :] + stress[2, :] + stress[4, :])
 end
 
-function collect_cell_quadratures(cellquads,mesh,cellsign,cellids)
-    totalnumqps = sum([length(cellquads[cellsign,cellid]) for cellid in cellids])
+function collect_cell_quadratures(cellquads, mesh, cellsign, cellids)
+    totalnumqps =
+        sum([length(cellquads[cellsign, cellid]) for cellid in cellids])
     dim = dimension(mesh)
 
-    referencepoints = zeros(dim,totalnumqps)
-    spatialpoints = zeros(dim,totalnumqps)
-    referencecellids = zeros(Int,totalnumqps)
+    referencepoints = zeros(dim, totalnumqps)
+    spatialpoints = zeros(dim, totalnumqps)
+    referencecellids = zeros(Int, totalnumqps)
 
     start = 1
     for cellid in cellids
-        quad = cellquads[cellsign,cellid]
+        quad = cellquads[cellsign, cellid]
         numqps = length(quad)
 
         stop = start + numqps - 1
-        cellmap = cell_map(mesh,cellsign,cellid)
+        cellmap = cell_map(mesh, cellsign, cellid)
 
-        referencepoints[:,start:stop] = points(quad)
-        spatialpoints[:,start:stop] = cellmap(points(quad))
-        referencecellids[start:stop] = repeat([cellid],numqps)
+        referencepoints[:, start:stop] = points(quad)
+        spatialpoints[:, start:stop] = cellmap(points(quad))
+        referencecellids[start:stop] = repeat([cellid], numqps)
 
         start = stop + 1
     end
-    return referencepoints,spatialpoints,referencecellids
+    return referencepoints, spatialpoints, referencecellids
 end
 
-function collect_cell_quadratures(cellquads,mesh,cellsign)
+function collect_cell_quadratures(cellquads, mesh, cellsign)
     ncells = number_of_cells(mesh)
-    cellsigns = [cell_sign(mesh,cellid) for cellid in 1:ncells]
-    cellids = findall(x->x == cellsign || x == 0, cellsigns)
-    collect_cell_quadratures(cellquads,mesh,cellsign,cellids)
+    cellsigns = [cell_sign(mesh, cellid) for cellid = 1:ncells]
+    cellids = findall(x -> x == cellsign || x == 0, cellsigns)
+    collect_cell_quadratures(cellquads, mesh, cellsign, cellids)
+end
+
+function stress_inner_product(stress)
+    return (stress[1, :] .* stress[1, :]) +
+           (stress[2, :] .* stress[2, :]) +
+           (stress[4, :] .* stress[4, :]) +
+           2.0 * (stress[3, :] .* stress[3, :])
 end
