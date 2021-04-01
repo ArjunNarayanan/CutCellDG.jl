@@ -66,10 +66,6 @@ function elements_per_mesh_side(mesh)
     return mesh.nelements
 end
 
-function widths(mesh::DGMesh)
-    return mesh.meshwidths
-end
-
 function dimension(dgmesh::DGMesh)
     return dgmesh.dim
 end

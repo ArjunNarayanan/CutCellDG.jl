@@ -2,6 +2,11 @@ function interpolation_points(basis::TensorProductBasis)
     return basis.points
 end
 
+function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
+
+    return NF
+end
+
 function cell_connectivity(mesh::UniformMesh)
     ncells = number_of_elements(mesh)
     nfaces = faces_per_cell(mesh)

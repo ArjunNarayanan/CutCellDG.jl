@@ -10,6 +10,7 @@ import ImplicitDomainQuadrature: extend
 
 include("utilities.jl")
 include("cell_map.jl")
+include("cg_mesh.jl")
 include("dg_mesh.jl")
 include("cut_mesh.jl")
 include("cell_quadratures.jl")
