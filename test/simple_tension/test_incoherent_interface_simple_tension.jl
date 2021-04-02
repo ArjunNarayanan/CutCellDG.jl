@@ -25,21 +25,23 @@ function test_incoherent_interface_simple_tension()
     numqp = 2
     basis = TensorProductBasis(2, polyorder)
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+
     x0 = [0.5, 0.0]
     normal = [1.0, 0.0]
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, normal, x0),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh = cutmesh
 

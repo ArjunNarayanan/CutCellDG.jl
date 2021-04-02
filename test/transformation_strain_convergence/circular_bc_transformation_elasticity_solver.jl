@@ -271,20 +271,18 @@ function construct_mesh_and_quadratures(
     numqp,
 )
     mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> -circle_distance_function(x, interfacecenter, interfaceradius),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
         cutmesh,
@@ -306,20 +304,21 @@ function construct_unmerged_mesh_and_quadratures(
     numqp,
 )
     mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> -circle_distance_function(x, interfacecenter, interfaceradius),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     return cutmesh, cellquads, facequads, interfacequads
 end
@@ -761,8 +760,8 @@ function update_product_interface_stress_maxnorm_error!(
 
         absdifference = abs.(numerical_stress - analytical_stress)
 
-        for i in 1:ndofs
-            err[i] = max(err[i],absdifference[i])
+        for i = 1:ndofs
+            err[i] = max(err[i], absdifference[i])
         end
     end
 end
@@ -793,8 +792,8 @@ function update_parent_interface_stress_maxnorm_error!(
 
         absdifference = abs.(numerical_stress - analytical_stress)
 
-        for i in 1:ndofs
-            err[i] = max(err[i],absdifference[i])
+        for i = 1:ndofs
+            err[i] = max(err[i], absdifference[i])
         end
     end
 end

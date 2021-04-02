@@ -28,19 +28,18 @@ function test_simple_tension(polyorder)
     cgmesh = CutCellDG.CGMesh(x0, widths, nelements, basis)
     mesh = CutCellDG.DGMesh(x0, widths, nelements, basis)
 
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, interfacenormal, interfacepoint),
-        mesh,
+        cgmesh,
+        basis,
     )
-    levelset = CutCellDG
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
 
     cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
@@ -100,8 +99,6 @@ function test_simple_tension(polyorder)
 
     op = CutCellDG.sparse_displacement_operator(sysmatrix, cutmesh)
     rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
-
-    # K = Array(op)
 
     sol = op \ rhs
     disp = reshape(sol, 2, :)

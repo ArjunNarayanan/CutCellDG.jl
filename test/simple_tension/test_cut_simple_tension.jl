@@ -27,22 +27,20 @@ function test_cut_simple_tension()
     numqp = required_quadrature_order(polyorder)
 
     basis = TensorProductBasis(2, polyorder)
+    cgmesh = CutCellDG.CGMesh(x0, widths, nelements, basis)
     mesh = CutCellDG.DGMesh(x0, widths, nelements, basis)
 
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, interfacenormal, interfacepoint),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
 
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()

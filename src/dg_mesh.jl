@@ -7,9 +7,10 @@ struct DGMesh
     numcells::Any
     numnodes::Any
     nodesperelement::Any
-    x0
-    meshwidths
-    nelements
+    x0::Any
+    meshwidths::Any
+    nelements::Any
+    mesh
 end
 
 function DGMesh(mesh, refcoords)
@@ -18,7 +19,7 @@ function DGMesh(mesh, refcoords)
 
     cellmaps = construct_cell_maps(mesh)
     numcells = length(cellmaps)
-    numnodes = numcells*nodesperelement
+    numnodes = numcells * nodesperelement
     nodalcoordinates = dg_nodal_coordinates(cellmaps, refcoords)
     nodalconnectivity = dg_nodal_connectivity(numcells, nodesperelement)
     cellconnectivity = cell_connectivity(mesh)
@@ -37,14 +38,15 @@ function DGMesh(mesh, refcoords)
         nodesperelement,
         x0,
         meshwidths,
-        nelements
+        nelements,
+        mesh
     )
 end
 
-function DGMesh(x0,widths,nelements,basis)
+function DGMesh(x0, widths, nelements, basis)
     refpoints = interpolation_points(basis)
-    mesh = UniformMesh(x0,widths,nelements)
-    return DGMesh(mesh,refpoints)
+    mesh = UniformMesh(x0, widths, nelements)
+    return DGMesh(mesh, refpoints)
 end
 
 function Base.show(io::IO, dgmesh::DGMesh)
@@ -55,11 +57,12 @@ function Base.show(io::IO, dgmesh::DGMesh)
     ncells = number_of_cells(dgmesh)
     nodesperelement = nodes_per_element(dgmesh)
     nnodes = number_of_nodes(dgmesh)
-    str = "DGMesh\n\tDimension : $dim\n\tCorner : $x0\n\tWidth : $meshwidths\n\t"*
-          "Elements/Side : $nelements\n\tNum. Cells : $ncells\n\t"*
-          "Nodes/Element : $nodesperelement\n\t"*
-          "Num. Nodes : $nnodes"
-    print(io,str)
+    str =
+        "DGMesh\n\tDimension : $dim\n\tCorner : $x0\n\tWidth : $meshwidths\n\t" *
+        "Elements/Side : $nelements\n\tNum. Cells : $ncells\n\t" *
+        "Nodes/Element : $nodesperelement\n\t" *
+        "Num. Nodes : $nnodes"
+    print(io, str)
 end
 
 function elements_per_mesh_side(mesh)
@@ -94,7 +97,16 @@ function elements_per_mesh_side(mesh::DGMesh)
     mesh.nelements
 end
 
-function cell_map(mesh::DGMesh,cellid::Int)
+function background_mesh(mesh::DGMesh)
+    return mesh.mesh
+end
+
+
+
+
+##########################################################################################
+
+function cell_map(mesh::DGMesh, cellid::Int)
     return mesh.cellmaps[cellid]
 end
 
@@ -102,17 +114,17 @@ function nodal_coordinates(mesh::DGMesh)
     return mesh.nodalcoordinates
 end
 
-function nodal_connectivity(mesh::DGMesh,cellid::Int)
-    return mesh.nodalconnectivity[:,cellid]
+function nodal_connectivity(mesh::DGMesh, cellid::Int)
+    return mesh.nodalconnectivity[:, cellid]
 end
 
-function nodal_coordinates(mesh::DGMesh,cellid::Int)
-    nodeids = nodal_connectivity(mesh,cellid)
-    return mesh.nodal_coordinates[:,nodeids]
+function nodal_coordinates(mesh::DGMesh, cellid::Int)
+    nodeids = nodal_connectivity(mesh, cellid)
+    return mesh.nodal_coordinates[:, nodeids]
 end
 
-function cell_connectivity(mesh::DGMesh,faceid,cellid)
-    return mesh.cellconnectivity[faceid,cellid]
+function cell_connectivity(mesh::DGMesh, faceid, cellid)
+    return mesh.cellconnectivity[faceid, cellid]
 end
 
 function dg_nodal_coordinates(cellmaps, refcoords)
@@ -142,13 +154,13 @@ function dg_nodal_connectivity(numelements, nodesperelement)
 end
 
 function jacobian(mesh::DGMesh)
-    return jacobian(cell_map(mesh,1))
+    return jacobian(cell_map(mesh, 1))
 end
 
 function inverse_jacobian(mesh::DGMesh)
-    return inverse_jacobian(cell_map(mesh,1))
+    return inverse_jacobian(cell_map(mesh, 1))
 end
 
 function face_determinant_jacobian(mesh::DGMesh)
-    return face_determinant_jacobian(cell_map(mesh,1))
+    return face_determinant_jacobian(cell_map(mesh, 1))
 end

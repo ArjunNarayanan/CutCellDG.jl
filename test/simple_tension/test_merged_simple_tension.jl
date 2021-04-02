@@ -18,23 +18,22 @@ function test_merged_simple_tension()
 
     basis = TensorProductBasis(2, polyorder)
     levelset = InterpolatingPolynomial(1, basis)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], widths, nelmts, basis)
     mesh = CutCellDG.DGMesh([0.0, 0.0], widths, nelmts, basis)
 
     interfaceangle = 40.0
     normal = [cosd(interfaceangle), sind(interfaceangle)]
     x0 = [1.8, 0.0]
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, normal, x0),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
         cutmesh,

@@ -42,19 +42,21 @@ function error_for_plane_interface(
 
     basis = TensorProductBasis(2, polyorder)
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+
+    levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, normal, x0),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
         cutmesh,
@@ -153,8 +155,8 @@ u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
 
 dx = 1.0 ./ nelmts
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+u1rate = convergence_rate(dx, u1err)
+u2rate = convergence_rate(dx, u2err)
 
 @test allapprox(u1rate, repeat([2.0], length(u1rate)), 0.1)
 @test allapprox(u1rate, repeat([2.0], length(u2rate)), 0.1)
@@ -189,8 +191,8 @@ u1err = [er[1] for er in err]
 u2err = [er[2] for er in err]
 
 dx = 1.0 ./ nelmts
-u1rate = convergence_rate(dx,u1err)
-u2rate = convergence_rate(dx,u2err)
+u1rate = convergence_rate(dx, u1err)
+u2rate = convergence_rate(dx, u2err)
 
 @test allapprox(u1rate, repeat([3.0], length(u1rate)), 0.05)
 @test allapprox(u1rate, repeat([3.0], length(u2rate)), 0.05)

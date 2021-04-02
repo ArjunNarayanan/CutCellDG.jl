@@ -40,7 +40,7 @@ struct InterfaceQuadratures
     end
 end
 
-function InterfaceQuadratures(cutmesh::CutMesh, levelset, numqp)
+function InterfaceQuadratures(cutmesh, levelset, numqp)
 
     numcells = number_of_cells(cutmesh)
 
@@ -121,13 +121,7 @@ function update_interface_quadrature!(
     invjac,
     numsplits,
 )
-    squad = surface_quadrature(
-        levelset,
-        xL,
-        xR,
-        numqp,
-        numsplits = numsplits,
-    )
+    squad = surface_quadrature(levelset, xL, xR, numqp, numsplits = numsplits)
     n = levelset_normals(levelset, points(squad), invjac)
     t = rotate_90(n)
     s = scale_area(t, invjac)

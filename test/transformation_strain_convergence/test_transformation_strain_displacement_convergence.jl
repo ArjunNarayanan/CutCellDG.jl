@@ -139,19 +139,19 @@ function displacement_error(
 
     basis = TensorProductBasis(2, polyorder)
     mesh = CutCellDG.DGMesh([0.0, 0.0], [width, width], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
+    cgmesh =
+        CutCellDG.CGMesh([0.0, 0.0], [width, width], [nelmts, nelmts], basis)
+
+    levelset = CutCellDG.LevelSet(
         x -> -circle_distance_function(x, center, inradius),
-        mesh,
+        cgmesh,
+        basis,
     )
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
         cutmesh,

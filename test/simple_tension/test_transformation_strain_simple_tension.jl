@@ -28,17 +28,18 @@ function test_transformation_strain_simple_tension()
     numqp = required_quadrature_order(polyorder) + 2
 
     basis = TensorProductBasis(2, polyorder)
+    cgmesh = CutCellDG.CGMesh([0.0,0.0],[L,W],[nelmts,nelmts],basis)
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = ones(CutCellDG.number_of_nodes(mesh))
 
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
+    levelset = CutCellDG.LevelSet(x->ones(size(x)[2]),cgmesh,basis)
+
+    cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()

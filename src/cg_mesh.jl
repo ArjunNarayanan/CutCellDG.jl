@@ -11,6 +11,7 @@ struct CGMesh
     meshwidths::Any
     nelements::Any
     nfmside::Any
+    mesh
 end
 
 function CGMesh(mesh, nodesperelement)
@@ -43,6 +44,7 @@ function CGMesh(mesh, nodesperelement)
         meshwidths,
         nelements,
         nfmside,
+        mesh
     )
 end
 
@@ -109,6 +111,14 @@ end
 function nodal_coordinates(mesh::CGMesh)
     return mesh.nodalcoordinates
 end
+
+function background_mesh(mesh::CGMesh)
+    return mesh.mesh
+end
+
+
+
+################################################################################
 
 function nodes_per_element_side(nodesperelement)
     nfeside = sqrt(nodesperelement)
