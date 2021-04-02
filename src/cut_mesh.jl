@@ -15,8 +15,8 @@ struct CutMesh
     end
 end
 
-function CutMesh(mesh, levelset, levelsetcoeffs; tol = 1e-4, perturbation = 1e-3)
-    cellsign = cell_sign!(mesh, levelset, levelsetcoeffs, tol, perturbation)
+function CutMesh(mesh, levelset; tol = 1e-4, perturbation = 1e-3)
+    cellsign = cell_sign!(levelset, tol, perturbation)
 
     posactivenodeids = active_node_ids(mesh, +1, cellsign)
     negactivenodeids = active_node_ids(mesh, -1, cellsign)
@@ -78,23 +78,23 @@ function nodal_coordinates(cutmesh::CutMesh)
     return nodal_coordinates(background_mesh(cutmesh))
 end
 
-function cell_sign!(mesh, levelset, levelsetcoeffs, tol, perturbation)
-    ncells = number_of_cells(mesh)
-    cellsign = zeros(Int, ncells)
+function cell_sign!(levelset,tol,perturbation)
+    ncells = number_of_cells(background_mesh(levelset))
+    cellsign = zeros(Int,ncells)
     xL,xR = [-1.,-1.],[1.,1.]
     for cellid = 1:ncells
-        nodeids = nodal_connectivity(mesh,cellid)
-        update!(levelset, levelsetcoeffs[nodeids])
+        load_coefficients!(levelset,cellid)
 
-        s = sign(levelset, xL, xR, tol=tol)
+        s = sign(interpolater(levelset), xL, xR, tol=tol)
         if (s == +1 || s == 0 || s == -1)
             cellsign[cellid] = s
         else
             @warn "Perturbing levelset function by perturbation = $perturbation"
-            levelsetcoeffs[nodeids] .+= perturbation
-            update!(levelset,levelsetcoeffs[nodeids])
+            newcoeffs = coefficients(levelset,cellid) .+ perturbation
+            update_coefficients!(levelset,cellid,newcoeffs)
+            load_coefficients!(levelset,cellid)
 
-            s = sign(levelset, xL, xR, tol=tol)
+            s = sign(interpolater(levelset), xL, xR, tol=tol)
             if (s == +1 || s == 0 || s == -1)
                 cellsign[cellid] = s
             else

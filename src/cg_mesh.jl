@@ -106,6 +106,10 @@ function nodes_per_mesh_side(mesh::CGMesh)
     return mesh.nfmside
 end
 
+function nodal_coordinates(mesh::CGMesh)
+    return mesh.nodalcoordinates
+end
+
 function nodes_per_element_side(nodesperelement)
     nfeside = sqrt(nodesperelement)
     @assert isinteger(nfeside)

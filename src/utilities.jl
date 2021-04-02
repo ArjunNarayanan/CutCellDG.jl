@@ -111,11 +111,6 @@ function cell_connectivity(mesh,faceid,cellid)
     return cell_connectivity(background_mesh(mesh),faceid,cellid)
 end
 
-function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
-
-    return NF
-end
-
 function reference_face_normals()
     n1 = [0.,-1.]
     n2 = [1.,0.]

@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-# using Revise
+using Revise
 using CutCellDG
 include("../useful_routines.jl")
 
@@ -46,21 +46,22 @@ polyorder = 1
 numqp = 2
 
 basis = TensorProductBasis(2, polyorder)
-levelset = InterpolatingPolynomial(1, basis)
-mesh = CutCellDG.DGMesh([0.0, 0.0], [2.0, 1.0], [2, 1], basis)
+x0 = [0.0, 0.0]
+meshwidths = [2.0, 1.0]
+nelements = [2, 1]
+dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, basis)
+cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, basis)
+
 
 normal = [1.0, 0.0]
-x0 = [1.1, 0.0]
-levelsetcoeffs = CutCellDG.levelset_coefficients(
-    x -> plane_distance_function(x, normal, x0),
-    mesh,
-)
+xI = [1.1, 0.0]
+levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,basis)
 
-cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
+cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
 interfacequads =
-    CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+    CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
 mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
     cutmesh,

@@ -11,13 +11,7 @@ struct CellQuadratures
     end
 end
 
-function CellQuadratures(
-    mesh,
-    levelset,
-    levelsetcoeffs,
-    numuniformqp,
-    numcutqp,
-)
+function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
     numcells = number_of_cells(mesh)
 
     tpq = tensor_product_quadrature(2, numuniformqp)
@@ -28,29 +22,57 @@ function CellQuadratures(
     xL, xR = [-1.0, -1.0], [1.0, 1.0]
 
     for cellid = 1:numcells
-        s = cell_sign(mesh,cellid)
+        s = cell_sign(mesh, cellid)
         if s == +1
             celltoquad[1, cellid] = 1
         elseif s == -1
             celltoquad[2, cellid] = 1
         elseif s == 0
-            nodeids = nodal_connectivity(background_mesh(mesh),cellid)
-            update!(levelset, levelsetcoeffs[nodeids])
+            nodeids = nodal_connectivity(background_mesh(mesh), cellid)
+            load_coefficients!(levelset, cellid)
 
             try
-                pquad = area_quadrature(levelset, +1, xL, xR, numcutqp, numsplits = 2)
+                pquad = area_quadrature(
+                    interpolater(levelset),
+                    +1,
+                    xL,
+                    xR,
+                    numcutqp,
+                    numsplits = 2,
+                )
                 push!(quads, pquad)
                 celltoquad[1, cellid] = length(quads)
 
-                nquad = area_quadrature(levelset, -1, xL, xR, numcutqp, numsplits = 2)
+                nquad = area_quadrature(
+                    interpolater(levelset),
+                    -1,
+                    xL,
+                    xR,
+                    numcutqp,
+                    numsplits = 2,
+                )
                 push!(quads, nquad)
                 celltoquad[2, cellid] = length(quads)
             catch e
-                pquad = area_quadrature(levelset, +1, xL, xR, numcutqp, numsplits = 3)
+                pquad = area_quadrature(
+                    interpolater(levelset),
+                    +1,
+                    xL,
+                    xR,
+                    numcutqp,
+                    numsplits = 3,
+                )
                 push!(quads, pquad)
                 celltoquad[1, cellid] = length(quads)
 
-                nquad = area_quadrature(levelset, -1, xL, xR, numcutqp, numsplits = 3)
+                nquad = area_quadrature(
+                    interpolater(levelset),
+                    -1,
+                    xL,
+                    xR,
+                    numcutqp,
+                    numsplits = 3,
+                )
                 push!(quads, nquad)
                 celltoquad[2, cellid] = length(quads)
             end
@@ -61,14 +83,15 @@ function CellQuadratures(
     return CellQuadratures(quads, celltoquad)
 end
 
-function CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    return CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp, numqp)
+function CellQuadratures(cutmesh, levelset, numqp)
+    return CellQuadratures(cutmesh, levelset, numqp, numqp)
 end
 
 function Base.getindex(vquads::CellQuadratures, s, cellid)
     row = cell_sign_to_row(s)
     idx = vquads.celltoquad[row, cellid]
-    idx > 0 || error("Cell $cellid, cellsign $s, does not have a cell quadrature")
+    idx > 0 ||
+        error("Cell $cellid, cellsign $s, does not have a cell quadrature")
     return vquads.quads[vquads.celltoquad[row, cellid]]
 end
 

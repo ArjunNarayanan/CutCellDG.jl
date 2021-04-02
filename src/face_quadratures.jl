@@ -13,7 +13,7 @@ struct FaceQuadratures
     end
 end
 
-function FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
+function FaceQuadratures(cutmesh, levelset, numqp)
 
     ncells = number_of_cells(cutmesh)
 
@@ -29,14 +29,14 @@ function FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
             facetoquad[2, :, cellid] .= 1:4
         elseif s == 0
             nodeids = nodal_connectivity(background_mesh(cutmesh),cellid)
-            update!(levelset, levelsetcoeffs[nodeids])
+            load_coefficients!(levelset,cellid)
 
-            pquad = face_quadratures(levelset, +1, quad1d)
+            pquad = face_quadratures(interpolater(levelset), +1, quad1d)
             idxstart = length(quads) + 1
             append!(quads, pquad)
             facetoquad[1, :, cellid] .= idxstart:(idxstart+3)
 
-            nquad = face_quadratures(levelset, -1, quad1d)
+            nquad = face_quadratures(interpolater(levelset), -1, quad1d)
             idxstart = length(quads) + 1
             append!(quads, nquad)
             facetoquad[2, :, cellid] .= idxstart:(idxstart+3)

@@ -1,17 +1,23 @@
 struct InterfaceQuadratures
     quads::Any
     normals::Any
-    tangents
+    tangents::Any
     scaleareas::Any
     celltoquad::Any
     ncells::Any
-    totalnumqps
-    function InterfaceQuadratures(quads, normals, tangents, scaleareas, celltoquad)
+    totalnumqps::Any
+    function InterfaceQuadratures(
+        quads,
+        normals,
+        tangents,
+        scaleareas,
+        celltoquad,
+    )
         ncells = length(celltoquad)
         nphase, nquads = size(quads)
 
         interfacenumqps = length.(quads)
-        interfacenumqps = nquads == 0 ? [0,0] : sum(interfacenumqps,dims=2)
+        interfacenumqps = nquads == 0 ? [0, 0] : sum(interfacenumqps, dims = 2)
         @assert interfacenumqps[1] == interfacenumqps[2]
         totalnumqps = interfacenumqps[1]
 
@@ -22,11 +28,19 @@ struct InterfaceQuadratures
         @assert all(celltoquad .>= 0)
         @assert all(celltoquad .<= nquads)
 
-        new(quads, normals, tangents, scaleareas, celltoquad, ncells, totalnumqps)
+        new(
+            quads,
+            normals,
+            tangents,
+            scaleareas,
+            celltoquad,
+            ncells,
+            totalnumqps,
+        )
     end
 end
 
-function InterfaceQuadratures(cutmesh::CutMesh, levelset, levelsetcoeffs, numqp)
+function InterfaceQuadratures(cutmesh::CutMesh, levelset, numqp)
 
     numcells = number_of_cells(cutmesh)
 
@@ -45,8 +59,7 @@ function InterfaceQuadratures(cutmesh::CutMesh, levelset, levelsetcoeffs, numqp)
     interfacecellids = findall(hasinterface)
     counter = 1
     for cellid in interfacecellids
-        nodeids = nodal_connectivity(background_mesh(cutmesh), cellid)
-        update!(levelset, levelsetcoeffs[nodeids])
+        load_coefficients!(levelset, cellid)
         cellmap = cell_map(cutmesh, cellid)
 
         try
@@ -56,7 +69,7 @@ function InterfaceQuadratures(cutmesh::CutMesh, levelset, levelsetcoeffs, numqp)
                 tangents,
                 scaleareas,
                 counter,
-                levelset,
+                interpolater(levelset),
                 xL,
                 xR,
                 numqp,
@@ -70,7 +83,7 @@ function InterfaceQuadratures(cutmesh::CutMesh, levelset, levelsetcoeffs, numqp)
                 tangents,
                 scaleareas,
                 counter,
-                levelset,
+                interpolater(levelset),
                 xL,
                 xR,
                 numqp,
@@ -108,7 +121,13 @@ function update_interface_quadrature!(
     invjac,
     numsplits,
 )
-    squad = surface_quadrature(levelset, xL, xR, numqp, numsplits = numsplits)
+    squad = surface_quadrature(
+        levelset,
+        xL,
+        xR,
+        numqp,
+        numsplits = numsplits,
+    )
     n = levelset_normals(levelset, points(squad), invjac)
     t = rotate_90(n)
     s = scale_area(t, invjac)
@@ -163,28 +182,28 @@ function update_interface_quadrature!(
     interfacequads.quads[row, idx] = quad
 end
 
-function collect_interface_normals(interfacequads,mesh)
+function collect_interface_normals(interfacequads, mesh)
 
     ncells = number_of_cells(mesh)
-    cellsign = [cell_sign(mesh,cellid) for cellid in 1:ncells]
+    cellsign = [cell_sign(mesh, cellid) for cellid = 1:ncells]
     cellids = findall(cellsign .== 0)
 
-    return collect_interface_normals(interfacequads,mesh,cellids)
+    return collect_interface_normals(interfacequads, mesh, cellids)
 end
 
-function collect_interface_normals(interfacequads,mesh,cellids)
+function collect_interface_normals(interfacequads, mesh, cellids)
 
-    totalnumqps = sum([length(interfacequads[1,cellid]) for cellid in cellids])
-    interfacenormals = zeros(2,totalnumqps)
+    totalnumqps = sum([length(interfacequads[1, cellid]) for cellid in cellids])
+    interfacenormals = zeros(2, totalnumqps)
     start = 1
 
     for cellid in cellids
-        normals = interface_normals(interfacequads,cellid)
+        normals = interface_normals(interfacequads, cellid)
         numqps = size(normals)[2]
 
         stop = start + numqps - 1
 
-        interfacenormals[:,start:stop] = normals
+        interfacenormals[:, start:stop] = normals
         start = stop + 1
     end
     return interfacenormals
