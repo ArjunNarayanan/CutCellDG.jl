@@ -48,6 +48,11 @@ function CGMesh(mesh, nodesperelement)
     )
 end
 
+function CGMesh(x0,meshwidths,nelements,nodesperelement::Int)
+    mesh = UniformMesh(x0,meshwidths,nelements)
+    return CGMesh(mesh,nodesperelement)
+end
+
 function CGMesh(x0,meshwidths,nelements,basis)
     nodesperelement = number_of_basis_functions(basis)
     mesh = UniformMesh(x0,meshwidths,nelements)
@@ -116,7 +121,9 @@ function background_mesh(mesh::CGMesh)
     return mesh.mesh
 end
 
-
+function cell_map(mesh::CGMesh,cellid)
+    return mesh.cellmaps[cellid]
+end
 
 ################################################################################
 

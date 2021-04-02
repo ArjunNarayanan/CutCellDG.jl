@@ -114,12 +114,18 @@ function mesh_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
     return sqrt.(err)
 end
 
-function cellwise_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh)
+function cellwise_L2_error(
+    nodalsolutions,
+    exactsolution,
+    basis,
+    cellquads,
+    mesh,
+)
 
     ndofs = size(nodalsolutions)[1]
     interpolater = InterpolatingPolynomial(ndofs, basis)
     ncells = CutCellDG.number_of_cells(mesh)
-    err = zeros(ndofs,2,ncells)
+    err = zeros(ndofs, 2, ncells)
 
     for cellid = 1:ncells
         cellsign = CutCellDG.cell_sign(mesh, cellid)
@@ -138,7 +144,7 @@ function cellwise_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh
                 cellmap,
                 quad,
             )
-            err[:,1,cellid] = cellerr
+            err[:, 1, cellid] = cellerr
         end
         if cellsign == -1 || cellsign == 0
             cellmap = CutCellDG.cell_map(mesh, -1, cellid)
@@ -154,7 +160,7 @@ function cellwise_L2_error(nodalsolutions, exactsolution, basis, cellquads, mesh
                 cellmap,
                 quad,
             )
-            err[:,2,cellid] = cellerr
+            err[:, 2, cellid] = cellerr
         end
     end
     return sqrt.(err)
@@ -222,8 +228,8 @@ function interface_L2_error(
 
     ncells = CutCellDG.number_of_cells(mesh)
 
-    for cellid in 1:ncells
-        if CutCellDG.cell_sign(mesh,cellid) == 0
+    for cellid = 1:ncells
+        if CutCellDG.cell_sign(mesh, cellid) == 0
             quad = interfacequads[levelsetsign, cellid]
             cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
             scalearea = CutCellDG.interface_scale_areas(interfacequads, cellid)
@@ -263,8 +269,8 @@ function integral_norm_on_interface(
     vals = zeros(ndofs)
     ncells = CutCellDG.number_of_cells(mesh)
 
-    for cellid in 1:ncells
-        if CutCellDG.cell_sign(mesh,cellid) == 0
+    for cellid = 1:ncells
+        if CutCellDG.cell_sign(mesh, cellid) == 0
             cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
             quad = interfacequads[levelsetsign, cellid]
             facescale = CutCellDG.interface_scale_areas(interfacequads, cellid)
@@ -283,12 +289,12 @@ function update_maxnorm_error!(
     quad,
 )
     ndofs = length(globalerror)
-    for (p,w) in quad
+    for (p, w) in quad
         numsol = interpolater(p)
         exsol = exactsolution(cellmap(p))
         pointerror = abs.(numsol - exsol)
-        for i in 1:ndofs
-            globalerror[i] = max(globalerror[i],pointerror[i])
+        for i = 1:ndofs
+            globalerror[i] = max(globalerror[i], pointerror[i])
         end
     end
 end
@@ -307,8 +313,8 @@ function interface_maxnorm_error(
 
     ncells = CutCellDG.number_of_cells(mesh)
 
-    for cellid in 1:ncells
-        if CutCellDG.cell_sign(mesh,cellid) == 0
+    for cellid = 1:ncells
+        if CutCellDG.cell_sign(mesh, cellid) == 0
             quad = interfacequads[levelsetsign, cellid]
             cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
 
@@ -331,26 +337,20 @@ end
 
 function update_maxnorm!(vals, func, cellmap, quad)
     ndofs = length(vals)
-    for (p,w) in quad
+    for (p, w) in quad
         v = abs.(func(cellmap(p)))
-        for i in 1:ndofs
-            vals[i] = max(vals[i],v[i])
+        for i = 1:ndofs
+            vals[i] = max(vals[i], v[i])
         end
     end
 end
 
-function maxnorm_on_interface(
-    func,
-    interfacequads,
-    levelsetsign,
-    mesh,
-    ndofs,
-)
+function maxnorm_on_interface(func, interfacequads, levelsetsign, mesh, ndofs)
     vals = zeros(ndofs)
     ncells = CutCellDG.number_of_cells(mesh)
 
-    for cellid in 1:ncells
-        if CutCellDG.cell_sign(mesh,cellid) == 0
+    for cellid = 1:ncells
+        if CutCellDG.cell_sign(mesh, cellid) == 0
             cellmap = CutCellDG.cell_map(mesh, levelsetsign, cellid)
             quad = interfacequads[levelsetsign, cellid]
 
@@ -358,4 +358,30 @@ function maxnorm_on_interface(
         end
     end
     return vals
+end
+
+function uniform_mesh_L2_error(nodalsolutions, exactsolution, basis, quad, mesh)
+    ndofs, nnodes = size(nodalsolutions)
+    err = zeros(ndofs)
+    interpolater = InterpolatingPolynomial(ndofs, basis)
+    ncells = CutCellDG.number_of_cells(mesh)
+
+    for cellid = 1:ncells
+        cellmap = CutCellDG.cell_map(mesh, cellid)
+        nodeids = CutCellDG.nodal_connectivity(mesh, cellid)
+        elementsolution = nodalsolutions[:, nodeids]
+        update!(interpolater, elementsolution)
+        add_cell_error_squared!(err, interpolater, exactsolution, cellmap, quad)
+    end
+    return sqrt.(err)
+end
+
+function integral_norm_on_uniform_mesh(func, quad, mesh, ndofs)
+    numcells = CutCellDG.number_of_cells(mesh)
+    vals = zeros(ndofs)
+    for cellid in 1:numcells
+        cellmap = CutCellDG.cell_map(mesh,cellid)
+        add_cell_norm_squared!(vals, func, cellmap, quad)
+    end
+    return sqrt.(vals)
 end

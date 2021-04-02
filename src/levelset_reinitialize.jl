@@ -1,3 +1,11 @@
+function hessian_matrix(poly, x)
+    h = hessian(poly, x)
+    return [
+        h[1] h[2]
+        h[2] h[3]
+    ]
+end
+
 function seed_zero_levelset_with_interfacequads(interfacequads, mesh)
 
     ncells = number_of_cells(mesh)
@@ -92,29 +100,35 @@ end
 
 function seed_cell_zero_levelset(xguess, func, grad; tol = 1e-12, r = 2.5)
     dim, nump = size(xguess)
-    pf = [project_on_zero_levelset(xguess[:, i], func, grad, tol, r) for i = 1:nump]
+    pf = [
+        project_on_zero_levelset(xguess[:, i], func, grad, tol, r) for
+        i = 1:nump
+    ]
     flags = [p[2] for p in pf]
     valididx = findall(flags)
     validpoints = [p[1] for p in pf[valididx]]
     return hcat(validpoints...)
 end
 
-function seed_zero_levelset(nump, levelset, levelsetcoeffs, cutmesh)
+function seed_zero_levelset(nump, levelset, cutmesh)
+
     refpoints = reference_seed_points(nump)
     refseedpoints = []
     spatialseedpoints = []
     seedcellids = Int[]
-    cellsign = cell_sign(cutmesh)
+    numcells = number_of_cells(cutmesh)
+
+    cellsign = [cell_sign(cutmesh, cellid) for cellid in 1:numcells]
     cellids = findall(cellsign .== 0)
+
     for cellid in cellids
         cellmap = cell_map(cutmesh, cellid)
-        nodeids = nodal_connectivity(cutmesh.mesh, cellid)
-        update!(levelset, levelsetcoeffs[nodeids])
+        load_coefficients!(levelset, cellid)
 
         xk = seed_cell_zero_levelset(
             refpoints,
-            levelset,
-            x -> vec(gradient(levelset, x)),
+            interpolater(levelset),
+            x -> vec(gradient(interpolater(levelset), x)),
         )
 
         numseedpoints = size(xk)[2]
@@ -184,4 +198,92 @@ function saye_newton_iterate(
         end
     end
     error("Did not converge in $maxiter iterations")
+end
+
+function closest_reference_points_on_zero_levelset(
+    querypoints,
+    refseedpoints,
+    spatialseedpoints,
+    seedcellids,
+    levelset,
+    mesh,
+    tol,
+    boundingradius,
+)
+
+    dim, numquerypoints = size(querypoints)
+    refclosestpoints = zeros(dim, numquerypoints)
+    refclosestcellids = zeros(Int, numquerypoints)
+    refgradients = zeros(dim, numquerypoints)
+
+    tree = KDTree(spatialseedpoints)
+    seedidx, seeddists = nn(tree, querypoints)
+
+    for (idx, sidx) in enumerate(seedidx)
+        xguess = refseedpoints[:, sidx]
+        xquery = querypoints[:, idx]
+        guesscellid = seedcellids[sidx]
+        cellmap = cell_map(mesh, guesscellid)
+        load_coefficients!(levelset, guesscellid)
+        interpolatingpoly = interpolater(levelset)
+
+        refcp = saye_newton_iterate(
+            xguess,
+            xquery,
+            interpolatingpoly,
+            x -> vec(gradient(interpolatingpoly, x)),
+            x -> hessian_matrix(interpolatingpoly, x),
+            cellmap,
+            tol,
+            boundingradius,
+        )
+
+        refclosestpoints[:, idx] = refcp
+        refclosestcellids[idx] = guesscellid
+        refgradients[:, idx] = gradient(interpolatingpoly, refcp)
+    end
+    return refclosestpoints, refclosestcellids, refgradients
+end
+
+function distance_to_zero_levelset(
+    querypoints,
+    refseedpoints,
+    spatialseedpoints,
+    seedcellids,
+    levelset,
+    mesh,
+    tol,
+    boundingradius,
+)
+
+    dim, numquerypoints = size(querypoints)
+    signeddistance = zeros(numquerypoints)
+
+    refclosestpoints, refclosestcellids, refgradients =
+        closest_reference_points_on_zero_levelset(
+            querypoints,
+            refseedpoints,
+            spatialseedpoints,
+            seedcellids,
+            levelset,
+            mesh,
+            tol,
+            boundingradius,
+        )
+
+    for i = 1:numquerypoints
+        refcp = refclosestpoints[:, i]
+        cellmap = cell_map(mesh, refclosestcellids[i])
+
+        spatialcp = cellmap(refcp)
+        xquery = querypoints[:, i]
+
+
+        g = vec(transform_gradient(refgradients[:, i]', jacobian(cellmap)))
+        s = sign(g' * (xquery - spatialcp))
+
+        signeddistance[i] = s * norm(spatialcp - xquery)
+    end
+
+    return signeddistance
 end

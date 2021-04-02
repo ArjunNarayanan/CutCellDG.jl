@@ -9,6 +9,10 @@ struct LevelSet
     end
 end
 
+function coefficients(levelset::LevelSet)
+    return levelset.coefficients
+end
+
 function coefficients(levelset::LevelSet,cellid)
     mesh = background_mesh(levelset)
     return levelset.coefficients[nodal_connectivity(mesh,cellid)]

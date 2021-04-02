@@ -113,3 +113,7 @@ end
         "transformation_strain_convergence/test_transformation_strain_L2_stress_convergence.jl",
     )
 end
+
+@safetestset "Test Levelset Reinitialize" begin
+    include("levelset_routines/test_levelset_reinitialize.jl")
+end
