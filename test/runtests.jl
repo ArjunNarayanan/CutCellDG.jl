@@ -117,3 +117,7 @@ end
 @safetestset "Test Levelset Reinitialize" begin
     include("levelset_routines/test_levelset_reinitialize.jl")
 end
+
+@safetestset "Test Levelset Propagate" begin
+    include("levelset_routines/test_levelset_propagate.jl")
+end
