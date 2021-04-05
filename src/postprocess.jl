@@ -132,6 +132,11 @@ function traction_force_at_points(stresses, normals)
     return tractionforce
 end
 
+function traction_component(traction,normal)
+    component = traction .* normal
+    return vec(sum(component,dims=1))
+end
+
 function pressure_at_points(stress)
     return -1.0 / 3.0 * (stress[1, :] + stress[2, :] + stress[4, :])
 end
@@ -174,4 +179,8 @@ function stress_inner_product(stress)
            (stress[2, :] .* stress[2, :]) +
            (stress[4, :] .* stress[4, :]) +
            2.0 * (stress[3, :] .* stress[3, :])
+end
+
+function dilatation(strain)
+    return strain[1,:] + strain[2,:] + strain[4,:]
 end

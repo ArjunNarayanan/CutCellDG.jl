@@ -1,12 +1,20 @@
-function bulk_modulus(l, m)
-    return l + 2m / 3
+function onleftboundary(x, L, W)
+    return x[1] ≈ 0.0
 end
 
-function onboundary(x, L, W)
-    return x[2] ≈ 0.0 || x[1] ≈ L || x[2] ≈ W || x[1] ≈ 0.0
+function onbottomboundary(x, L, W)
+    return x[2] ≈ 0.0
 end
 
-function nodal_displacement(
+function onrightboundary(x, L, W)
+    return x[1] ≈ L
+end
+
+function ontopboundary(x, L, W)
+    return x[2] ≈ W
+end
+
+function free_slip_bc_nodal_displacement(
     mesh,
     basis,
     cellquads,
@@ -14,7 +22,6 @@ function nodal_displacement(
     interfacequads,
     stiffness,
     theta0,
-    boundarydisplacement,
     penalty;
     eta = 1,
 )
@@ -58,7 +65,7 @@ function nodal_displacement(
         mesh,
     )
 
-    CutCellDG.assemble_coherent_interface_condition!(
+    CutCellDG.assemble_incoherent_interface_condition!(
         sysmatrix,
         basis,
         interfacequads,
@@ -67,7 +74,7 @@ function nodal_displacement(
         penalty,
         eta,
     )
-    CutCellDG.assemble_coherent_interface_transformation_linear_form!(
+    CutCellDG.assemble_incoherent_interface_transformation_linear_form!(
         sysrhs,
         transfstress,
         basis,
@@ -75,24 +82,48 @@ function nodal_displacement(
         mesh,
     )
 
-    CutCellDG.assemble_penalty_displacement_bc!(
+    CutCellDG.assemble_penalty_displacement_component_bc!(
         sysmatrix,
         sysrhs,
-        boundarydisplacement,
+        x->0.0,
         basis,
         facequads,
         stiffness,
         mesh,
-        x -> onboundary(x, L, W),
+        x -> onleftboundary(x, L, W),
+        [1.0,0.0],
         penalty,
     )
-    CutCellDG.assemble_penalty_displacement_transformation_linear_form!(
+    CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
         sysrhs,
         transfstress,
         basis,
         facequads,
         mesh,
-        x -> onboundary(x, L, W),
+        x -> onleftboundary(x, L, W),
+        [1.0,0.0]
+    )
+
+    CutCellDG.assemble_penalty_displacement_component_bc!(
+        sysmatrix,
+        sysrhs,
+        x->0.0,
+        basis,
+        facequads,
+        stiffness,
+        mesh,
+        x -> onbottomboundary(x, L, W),
+        [0.0,1.0],
+        penalty,
+    )
+    CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
+        sysrhs,
+        transfstress,
+        basis,
+        facequads,
+        mesh,
+        x -> onbottomboundary(x, L, W),
+        [0.0,1.0]
     )
 
     matrix = CutCellDG.sparse_displacement_operator(sysmatrix, mesh)
@@ -107,8 +138,7 @@ function construct_mesh_and_quadratures(
     meshwidth,
     nelmts,
     basis,
-    interfacecenter,
-    interfaceradius,
+    corner,
     numqp;
     tinyratio = 0.2,
 )
@@ -116,7 +146,7 @@ function construct_mesh_and_quadratures(
     mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 
     levelset = CutCellDG.LevelSet(
-        x -> -circle_distance_function(x, interfacecenter, interfaceradius),
+        x -> -corner_distance_function(x, corner),
         cgmesh,
         basis,
     )
