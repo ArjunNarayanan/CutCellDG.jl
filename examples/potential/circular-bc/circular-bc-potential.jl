@@ -20,7 +20,7 @@ end
 
 polyorder = 4
 nelmts = 17
-penaltyfactor = 1e2
+penaltyfactor = 1e1
 
 folderpath = "examples/potential/circular-bc/"
 filename =

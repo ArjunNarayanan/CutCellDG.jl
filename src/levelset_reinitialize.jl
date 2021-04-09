@@ -41,7 +41,8 @@ function seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
                 refseedpoints[row, :, start:stop] = refpoints
                 spatialseedpoints[row, :, start:stop] = spatialpoints
 
-                seedcellids[row, start:stop] = repeat([cellid], numqps)
+                seedcellid = solution_cell_id(mesh,s,cellid)
+                seedcellids[row, start:stop] = repeat([seedcellid], numqps)
             end
             start = stop + 1
         end
@@ -242,7 +243,7 @@ function closest_reference_points_on_zero_levelset(
                     tol,
                     boundingradius,
                 )
-                
+
                 refclosestpoints[row, :, idx] = refcp
                 refclosestcellids[row, idx] = guesscellid
                 refgradients[row, :, idx] = gradient(interpolatingpoly, refcp)
