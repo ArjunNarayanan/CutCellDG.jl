@@ -118,7 +118,7 @@ function seed_zero_levelset(nump, levelset, cutmesh)
     seedcellids = Int[]
     numcells = number_of_cells(cutmesh)
 
-    cellsign = [cell_sign(cutmesh, cellid) for cellid in 1:numcells]
+    cellsign = [cell_sign(cutmesh, cellid) for cellid = 1:numcells]
     cellids = findall(cellsign .== 0)
 
     for cellid in cellids
@@ -212,35 +212,46 @@ function closest_reference_points_on_zero_levelset(
 )
 
     dim, numquerypoints = size(querypoints)
-    refclosestpoints = zeros(dim, numquerypoints)
-    refclosestcellids = zeros(Int, numquerypoints)
-    refgradients = zeros(dim, numquerypoints)
+    refclosestpoints = zeros(2, dim, numquerypoints)
+    refclosestcellids = zeros(Int, 2, numquerypoints)
+    refgradients = zeros(2, dim, numquerypoints)
 
     tree = KDTree(spatialseedpoints)
     seedidx, seeddists = nn(tree, querypoints)
 
     for (idx, sidx) in enumerate(seedidx)
-        xguess = refseedpoints[:, sidx]
-        xquery = querypoints[:, idx]
-        guesscellid = seedcellids[sidx]
-        cellmap = cell_map(mesh, guesscellid)
-        load_coefficients!(levelset, guesscellid)
-        interpolatingpoly = interpolater(levelset)
+        for cellsign in [+1, -1]
+            row = cell_sign_to_row(cellsign)
 
-        refcp = saye_newton_iterate(
-            xguess,
-            xquery,
-            interpolatingpoly,
-            x -> vec(gradient(interpolatingpoly, x)),
-            x -> hessian_matrix(interpolatingpoly, x),
-            cellmap,
-            tol,
-            boundingradius,
-        )
+            xguess = refseedpoints[row, :, sidx]
+            xquery = querypoints[:, idx]
+            guesscellid = seedcellids[row, sidx]
 
-        refclosestpoints[:, idx] = refcp
-        refclosestcellids[idx] = guesscellid
-        refgradients[:, idx] = gradient(interpolatingpoly, refcp)
+            cellmap = cell_map(mesh, cellsign, guesscellid)
+            load_coefficients!(levelset, guesscellid)
+            interpolatingpoly = interpolater(levelset)
+
+            try
+                refcp = saye_newton_iterate(
+                    xguess,
+                    xquery,
+                    interpolatingpoly,
+                    x -> vec(gradient(interpolatingpoly, x)),
+                    x -> hessian_matrix(interpolatingpoly, x),
+                    cellmap,
+                    tol,
+                    boundingradius,
+                )
+                
+                refclosestpoints[row, :, idx] = refcp
+                refclosestcellids[row, idx] = guesscellid
+                refgradients[row, :, idx] = gradient(interpolatingpoly, refcp)
+            catch e
+                println("Newton iteration failed to converge")
+                println("Check levelset function on cell $guesscellid")
+                throw(e)
+            end
+        end
     end
     return refclosestpoints, refclosestcellids, refgradients
 end
