@@ -60,7 +60,7 @@ parentclosestpoints = CutCellDG.map_to_spatial(
     CutCellDG.background_mesh(mergedmesh),
 )
 
-@test allapprox(refclosestpoints[1,:,:],[-0.9,0.0])
-@test allapprox(refclosestpoints[2,:,:],[1.1,0.0])
-@test allapprox(productclosestpoints, [2.0 + delta, 1.0])
-@test allapprox(parentclosestpoints, [2.0 + delta,1.0])
+@test allapprox(refclosestpoints[1,:,:],[-0.9,0.0],1e2eps())
+@test allapprox(refclosestpoints[2,:,:],[1.1,0.0],1e2eps())
+@test allapprox(productclosestpoints, [2.0 + delta, 1.0],1e2eps())
+@test allapprox(parentclosestpoints, [2.0 + delta,1.0],1e2eps())
