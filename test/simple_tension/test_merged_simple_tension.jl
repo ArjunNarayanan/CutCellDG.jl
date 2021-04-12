@@ -35,14 +35,9 @@ function test_merged_simple_tension()
     interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-    )
-    @assert hasmergedcells
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh =
+        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+    @assert CutCellDG.has_merged_cells(mergedmesh)
 
     lambda, mu = (1.0, 2.0)
     penalty = 1.0

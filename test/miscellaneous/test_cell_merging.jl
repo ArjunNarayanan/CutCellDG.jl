@@ -55,20 +55,17 @@ cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, basis)
 
 normal = [1.0, 0.0]
 xI = [1.1, 0.0]
-levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,basis)
+levelset = CutCellDG.LevelSet(
+    x -> plane_distance_function(x, normal, xI),
+    cgmesh,
+    basis,
+)
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-interfacequads =
-    CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-    cutmesh,
-    cellquads,
-    facequads,
-    interfacequads,
-)
-mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+mergedmesh = CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
 @test CutCellDG.number_of_nodes(mergedmesh) == 8
-@test hasmergedcells
+@test CutCellDG.has_merged_cells(mergedmesh)

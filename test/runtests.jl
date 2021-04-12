@@ -118,6 +118,10 @@ end
     include("levelset_routines/test_levelset_reinitialize.jl")
 end
 
+@safetestset "Test Closest Point Algorithm on MergedMesh" begin
+    include("levelset_routines/test_closest_points_on_merged_mesh.jl")
+end
+
 @safetestset "Test Levelset Propagate" begin
     include("levelset_routines/test_levelset_propagate.jl")
 end

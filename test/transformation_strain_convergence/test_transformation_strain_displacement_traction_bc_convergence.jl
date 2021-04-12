@@ -241,22 +241,12 @@ function displacement_error(
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-    )
-    quadareas = CutCellDG.quadrature_areas(cellquads, cutmesh)
-    # @assert hasmergedcells
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh =
+        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
 
 
     sysmatrix = CutCellDG.SystemMatrix()

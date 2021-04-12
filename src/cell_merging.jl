@@ -185,16 +185,17 @@ function merge_cell_with_suitable_neighbor!(
     row = cell_sign_to_row(cellsign)
 
     nbrcellids = cell_connectivity(background_mesh(cutmesh), :, cellid)
-    nbrareas = [nbrid == 0 ? 0.0 : quadareas[row,nbrid] for nbrid in nbrcellids]
+    nbrareas =
+        [nbrid == 0 ? 0.0 : quadareas[row, nbrid] for nbrid in nbrcellids]
 
     faceid = argmax(nbrareas)
     mergecellid = nbrcellids[faceid]
     oppositeface = opposite_face(faceid)
 
     # Check that the neighbor is not a tiny cell
-    @assert !istinycell[row,mergecellid] "Attempted to merge with a tiny cell"
+    @assert !istinycell[row, mergecellid] "Attempted to merge with a tiny cell"
     # Check that the neighbor has same phase
-    nbrcellsign = cell_sign(cutmesh,mergecellid)
+    nbrcellsign = cell_sign(cutmesh, mergecellid)
     @assert nbrcellsign == cellsign || nbrcellsign == 0 "Attempted to merge with cell of different phase"
 
     merge_cells!(mergedwithcell, cellsign, mergecellid, cellid)
@@ -226,7 +227,8 @@ struct MergedMesh
     cutmesh::Any
     nodelabeltonodeid::Any
     numnodes::Any
-    function MergedMesh(cutmesh, mergedwithcell)
+    hasmergedcells::Any
+    function MergedMesh(cutmesh, mergedwithcell, hasmergedcells)
         activenodelabels = active_node_labels(cutmesh, mergedwithcell)
         maxlabel = maximum(activenodelabels)
         nodelabeltonodeid = zeros(Int, maxlabel)
@@ -234,16 +236,42 @@ struct MergedMesh
             nodelabeltonodeid[label] = idx
         end
         numnodes = length(activenodelabels)
-        new(mergedwithcell, cutmesh, nodelabeltonodeid, numnodes)
+        new(
+            mergedwithcell,
+            cutmesh,
+            nodelabeltonodeid,
+            numnodes,
+            hasmergedcells,
+        )
     end
+end
+
+function MergedMesh(
+    cutmesh,
+    cellquads,
+    facequads,
+    interfacequads;
+    tinyratio = 0.2,
+)
+
+    @assert typeof(background_mesh(cutmesh)) == DGMesh
+    mergedwithcell, hasmergedcells = merge_tiny_cells_in_mesh!(
+        cutmesh,
+        cellquads,
+        facequads,
+        interfacequads,
+        tinyratio,
+    )
+
+    return MergedMesh(cutmesh, mergedwithcell, hasmergedcells)
 end
 
 function merge_tiny_cells_in_mesh!(
     cutmesh,
     cellquads,
     facequads,
-    interfacequads;
-    tinyratio = 0.2,
+    interfacequads,
+    tinyratio,
 )
     ncells = number_of_cells(cutmesh)
 
@@ -252,7 +280,7 @@ function merge_tiny_cells_in_mesh!(
     quadareas = quadrature_areas(cellquads, cutmesh)
     tinyarea = tinyratio * sum(weights(uniform_cell_quadrature(cellquads)))
     istinycell = is_tiny_cell(cutmesh, quadareas, tinyarea)
-    hasmergedcells = reduce(|,istinycell)
+    hasmergedcells = reduce(|, istinycell)
     nfaces = number_of_faces_per_cell(facequads)
 
     for cellid = 1:ncells
@@ -295,7 +323,11 @@ function merge_tiny_cells_in_mesh!(
             end
         end
     end
-    return mergedwithcell,hasmergedcells
+    return mergedwithcell, hasmergedcells
+end
+
+function has_merged_cells(mergedmesh::MergedMesh)
+    return mergedmesh.hasmergedcells
 end
 
 function background_mesh(mergedmesh::MergedMesh)

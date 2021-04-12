@@ -34,7 +34,10 @@ testleftcoords = [
     5.0 5.5 6.0 5.0 5.5 6.0
 ]
 
-@test allapprox(CutCellDG.bottom_ghost_coordinates(paddedmesh), testbottomcoords)
+@test allapprox(
+    CutCellDG.bottom_ghost_coordinates(paddedmesh),
+    testbottomcoords,
+)
 @test allapprox(CutCellDG.right_ghost_coordinates(paddedmesh), testrightcoords)
 @test allapprox(CutCellDG.top_ghost_coordinates(paddedmesh), testtopcoords)
 @test allapprox(CutCellDG.left_ghost_coordinates(paddedmesh), testleftcoords)
@@ -45,21 +48,26 @@ nelmtsx, nelmtsy = 2, 1
 numghostlayers = 1
 polyorder = 2
 
-xI = [0.0,0.5]
-normal = [0.0,1.0]
+xI = [0.0, 0.5]
+normal = [0.0, 1.0]
 tol = 1e-8
 boundingradius = 6.0
 
 basis = TensorProductBasis(2, polyorder)
 mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], basis)
 
-levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),mesh,basis)
+levelset =
+    CutCellDG.LevelSet(x -> plane_distance_function(x, normal, xI), mesh, basis)
 
+paddedmesh = CutCellDG.BoundaryPaddedMesh(
+    CutCellDG.background_mesh(levelset),
+    numghostlayers,
+)
 cutmesh = CutCellDG.CutMesh(mesh, levelset)
-paddedmesh = CutCellDG.BoundaryPaddedMesh(cutmesh, numghostlayers)
 
-refseedpoints, spatialseedpoints, seedcellids =
-    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+refseedpoints, seedcellids = CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+spatialseedpoints =
+    CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
 
 paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     paddedmesh,
@@ -67,7 +75,6 @@ paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     spatialseedpoints,
     seedcellids,
     levelset,
-    cutmesh,
     tol,
     boundingradius,
 )
@@ -78,10 +85,10 @@ Dmy = CutCellDG.first_order_vertical_backward_difference(paddedlevelset)
 Dpy = CutCellDG.first_order_vertical_forward_difference(paddedlevelset)
 
 numnodes = CutCellDG.number_of_nodes(mesh)
-@test allapprox(Dmy,ones(length(numnodes)))
-@test allapprox(Dpy,ones(length(numnodes)))
-@test allapprox(Dmx,zeros(length(numnodes)))
-@test allapprox(Dpx,zeros(length(numnodes)))
+@test allapprox(Dmy, ones(length(numnodes)))
+@test allapprox(Dpy, ones(length(numnodes)))
+@test allapprox(Dmx, zeros(length(numnodes)))
+@test allapprox(Dpx, zeros(length(numnodes)))
 
 
 
@@ -91,8 +98,8 @@ nelmtsx, nelmtsy = 2, 1
 numghostlayers = 1
 polyorder = 2
 
-xI = [0.5,0.0]
-normal = [1.0,0.0]
+xI = [0.5, 0.0]
+normal = [1.0, 0.0]
 tol = 1e-8
 boundingradius = 6.0
 
@@ -100,13 +107,20 @@ basis = TensorProductBasis(2, polyorder)
 mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], basis)
 numnodes = CutCellDG.number_of_nodes(mesh)
 
-levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),mesh,basis)
+levelset =
+    CutCellDG.LevelSet(x -> plane_distance_function(x, normal, xI), mesh, basis)
+paddedmesh = CutCellDG.BoundaryPaddedMesh(
+    CutCellDG.background_mesh(levelset),
+    numghostlayers,
+)
+cutmesh = CutCellDG.CutMesh(mesh, levelset)
 
-cutmesh = CutCellDG.CutMesh(mesh,levelset)
-paddedmesh = CutCellDG.BoundaryPaddedMesh(cutmesh, numghostlayers)
 
-refseedpoints, spatialseedpoints, seedcellids =
+refseedpoints, seedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+spatialseedpoints =
+    CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
+
 
 paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     paddedmesh,
@@ -114,7 +128,6 @@ paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     spatialseedpoints,
     seedcellids,
     levelset,
-    cutmesh,
     tol,
     boundingradius,
 )
@@ -124,7 +137,7 @@ Dpx = CutCellDG.first_order_horizontal_forward_difference(paddedlevelset)
 Dmy = CutCellDG.first_order_vertical_backward_difference(paddedlevelset)
 Dpy = CutCellDG.first_order_vertical_forward_difference(paddedlevelset)
 
-@test allapprox(Dmx,ones(length(numnodes)))
-@test allapprox(Dpx,ones(length(numnodes)))
-@test allapprox(Dmy,zeros(length(numnodes)))
-@test allapprox(Dpy,zeros(length(numnodes)))
+@test allapprox(Dmx, ones(length(numnodes)))
+@test allapprox(Dpx, ones(length(numnodes)))
+@test allapprox(Dmy, zeros(length(numnodes)))
+@test allapprox(Dpy, zeros(length(numnodes)))

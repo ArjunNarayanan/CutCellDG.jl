@@ -13,21 +13,22 @@ function reinitialization_error(distancefunction, nelmts, polyorder)
     quad = tensor_product_quadrature(2, numqp)
 
     mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    levelset = CutCellDG.LevelSet(distancefunction,mesh,basis)
+    levelset = CutCellDG.LevelSet(distancefunction, mesh, basis)
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
 
-    refseedpoints, spatialseedpoints, seedcellids =
+    seedpoints, seedcellids =
         CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 
+    spatialseedpoints =
+        CutCellDG.map_to_spatial(seedpoints, seedcellids, cutmesh)
     nodalcoordinates = CutCellDG.nodal_coordinates(cutmesh)
     signeddistance = CutCellDG.distance_to_zero_levelset(
         nodalcoordinates,
-        refseedpoints,
+        seedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
-        cutmesh,
         1e-8,
         4.5,
     )
@@ -54,16 +55,22 @@ nelmts = [2^i + 1 for i in powers]
 
 dx = 1.0 ./ nelmts
 err = [
-    reinitialization_error(x -> circle_distance_function(x, xc, rad), ne, polyorder)
-    for ne in nelmts
+    reinitialization_error(
+        x -> circle_distance_function(x, xc, rad),
+        ne,
+        polyorder,
+    ) for ne in nelmts
 ]
 rate = convergence_rate(dx, err)
 @test allapprox(rate, 2 * ones(length(rate)), 0.05)
 
 corner = [0.5, 0.5]
 err = [
-    reinitialization_error(x -> corner_distance_function(x, corner), ne, polyorder)
-    for ne in nelmts
+    reinitialization_error(
+        x -> corner_distance_function(x, corner),
+        ne,
+        polyorder,
+    ) for ne in nelmts
 ]
-rate = convergence_rate(dx,err)
+rate = convergence_rate(dx, err)
 @test all(rate .> 1.0)

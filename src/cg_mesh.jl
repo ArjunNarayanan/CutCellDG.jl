@@ -11,7 +11,7 @@ struct CGMesh
     meshwidths::Any
     nelements::Any
     nfmside::Any
-    mesh
+    mesh::Any
 end
 
 function CGMesh(mesh, nodesperelement)
@@ -44,19 +44,19 @@ function CGMesh(mesh, nodesperelement)
         meshwidths,
         nelements,
         nfmside,
-        mesh
+        mesh,
     )
 end
 
-function CGMesh(x0,meshwidths,nelements,nodesperelement::Int)
-    mesh = UniformMesh(x0,meshwidths,nelements)
-    return CGMesh(mesh,nodesperelement)
+function CGMesh(x0, meshwidths, nelements, nodesperelement::Int)
+    mesh = UniformMesh(x0, meshwidths, nelements)
+    return CGMesh(mesh, nodesperelement)
 end
 
-function CGMesh(x0,meshwidths,nelements,basis)
+function CGMesh(x0, meshwidths, nelements, basis)
     nodesperelement = number_of_basis_functions(basis)
-    mesh = UniformMesh(x0,meshwidths,nelements)
-    return CGMesh(mesh,nodesperelement)
+    mesh = UniformMesh(x0, meshwidths, nelements)
+    return CGMesh(mesh, nodesperelement)
 end
 
 function Base.show(io::IO, mesh::CGMesh)
@@ -121,10 +121,17 @@ function background_mesh(mesh::CGMesh)
     return mesh.mesh
 end
 
-function cell_map(mesh::CGMesh,cellid)
+function cell_map(mesh::CGMesh, cellid)
     return mesh.cellmaps[cellid]
 end
 
+function jacobian(mesh::CGMesh)
+    return jacobian(cell_map(mesh, 1))
+end
+
+function inverse_jacobian(mesh::CGMesh)
+    return inverse_jacobian(cell_map(mesh, 1))
+end
 ################################################################################
 
 function nodes_per_element_side(nodesperelement)

@@ -51,20 +51,12 @@ function error_for_plane_interface(
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-    )
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh =
+        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()

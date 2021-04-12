@@ -21,7 +21,7 @@ function seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
     dim = dimension(mesh)
 
     refseedpoints = zeros(2, dim, totalnumqps)
-    spatialseedpoints = zeros(2, dim, totalnumqps)
+    # spatialseedpoints = zeros(2, dim, totalnumqps)
     seedcellids = zeros(Int, 2, totalnumqps)
 
     start = 1
@@ -39,15 +39,16 @@ function seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
                 row = cell_sign_to_row(s)
 
                 refseedpoints[row, :, start:stop] = refpoints
-                spatialseedpoints[row, :, start:stop] = spatialpoints
+                # spatialseedpoints[row, :, start:stop] = spatialpoints
 
-                seedcellid = solution_cell_id(mesh,s,cellid)
+                seedcellid = solution_cell_id(mesh, s, cellid)
                 seedcellids[row, start:stop] = repeat([seedcellid], numqps)
             end
             start = stop + 1
         end
     end
-    return refseedpoints, spatialseedpoints, seedcellids
+    return refseedpoints, seedcellids
+    # return refseedpoints, spatialseedpoints, seedcellids
 end
 
 function project_on_zero_levelset(
@@ -115,7 +116,6 @@ function seed_zero_levelset(nump, levelset, cutmesh)
 
     refpoints = reference_seed_points(nump)
     refseedpoints = []
-    spatialseedpoints = []
     seedcellids = Int[]
     numcells = number_of_cells(cutmesh)
 
@@ -123,7 +123,6 @@ function seed_zero_levelset(nump, levelset, cutmesh)
     cellids = findall(cellsign .== 0)
 
     for cellid in cellids
-        cellmap = cell_map(cutmesh, cellid)
         load_coefficients!(levelset, cellid)
 
         xk = seed_cell_zero_levelset(
@@ -136,12 +135,10 @@ function seed_zero_levelset(nump, levelset, cutmesh)
 
         append!(seedcellids, repeat([cellid], numseedpoints))
         push!(refseedpoints, xk)
-        push!(spatialseedpoints, cellmap(xk))
     end
 
     refseedpoints = hcat(refseedpoints...)
-    spatialseedpoints = hcat(spatialseedpoints...)
-    return refseedpoints, spatialseedpoints, seedcellids
+    return refseedpoints, seedcellids
 end
 
 function saye_newton_iterate(
@@ -201,7 +198,7 @@ function saye_newton_iterate(
     error("Did not converge in $maxiter iterations")
 end
 
-function closest_reference_points_on_zero_levelset(
+function closest_reference_points_on_merged_mesh(
     querypoints,
     refseedpoints,
     spatialseedpoints,
@@ -215,7 +212,6 @@ function closest_reference_points_on_zero_levelset(
     dim, numquerypoints = size(querypoints)
     refclosestpoints = zeros(2, dim, numquerypoints)
     refclosestcellids = zeros(Int, 2, numquerypoints)
-    refgradients = zeros(2, dim, numquerypoints)
 
     tree = KDTree(spatialseedpoints)
     seedidx, seeddists = nn(tree, querypoints)
@@ -246,12 +242,62 @@ function closest_reference_points_on_zero_levelset(
 
                 refclosestpoints[row, :, idx] = refcp
                 refclosestcellids[row, idx] = guesscellid
-                refgradients[row, :, idx] = gradient(interpolatingpoly, refcp)
             catch e
                 println("Newton iteration failed to converge")
                 println("Check levelset function on cell $guesscellid")
                 throw(e)
             end
+        end
+    end
+    return refclosestpoints, refclosestcellids
+end
+
+function closest_reference_points_on_levelset(
+    querypoints,
+    refseedpoints,
+    spatialseedpoints,
+    seedcellids,
+    levelset,
+    tol,
+    boundingradius,
+)
+
+    dim, numquerypoints = size(querypoints)
+    refclosestpoints = zeros(dim, numquerypoints)
+    refclosestcellids = zeros(Int, numquerypoints)
+    refgradients = zeros(dim, numquerypoints)
+
+    tree = KDTree(spatialseedpoints)
+    seedidx, seeddists = nn(tree, querypoints)
+
+    for (idx, sidx) in enumerate(seedidx)
+        xguess = refseedpoints[:, sidx]
+        xquery = querypoints[:, idx]
+        guesscellid = seedcellids[sidx]
+
+        cellmap = cell_map(background_mesh(levelset), guesscellid)
+        load_coefficients!(levelset, guesscellid)
+        interpolatingpoly = interpolater(levelset)
+
+        try
+            refcp = saye_newton_iterate(
+                xguess,
+                xquery,
+                interpolatingpoly,
+                x -> vec(gradient(interpolatingpoly, x)),
+                x -> hessian_matrix(interpolatingpoly, x),
+                cellmap,
+                tol,
+                boundingradius,
+            )
+
+            refclosestpoints[:, idx] = refcp
+            refclosestcellids[idx] = guesscellid
+            refgradients[:, idx] = gradient(interpolatingpoly, refcp)
+        catch e
+            println("Newton iteration failed to converge")
+            println("Check levelset function on cell $guesscellid")
+            throw(e)
         end
     end
     return refclosestpoints, refclosestcellids, refgradients
@@ -263,35 +309,34 @@ function distance_to_zero_levelset(
     spatialseedpoints,
     seedcellids,
     levelset,
-    mesh,
     tol,
     boundingradius,
 )
 
     dim, numquerypoints = size(querypoints)
     signeddistance = zeros(numquerypoints)
+    jac = jacobian(background_mesh(levelset))
 
     refclosestpoints, refclosestcellids, refgradients =
-        closest_reference_points_on_zero_levelset(
+        closest_reference_points_on_levelset(
             querypoints,
             refseedpoints,
             spatialseedpoints,
             seedcellids,
             levelset,
-            mesh,
             tol,
             boundingradius,
         )
 
     for i = 1:numquerypoints
         refcp = refclosestpoints[:, i]
-        cellmap = cell_map(mesh, refclosestcellids[i])
+        cellmap = cell_map(background_mesh(levelset), refclosestcellids[i])
 
         spatialcp = cellmap(refcp)
         xquery = querypoints[:, i]
 
 
-        g = vec(transform_gradient(refgradients[:, i]', jacobian(cellmap)))
+        g = vec(transform_gradient(refgradients[:, i]', jac))
         s = sign(g' * (xquery - spatialcp))
 
         signeddistance[i] = s * norm(spatialcp - xquery)

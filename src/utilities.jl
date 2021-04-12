@@ -168,3 +168,14 @@ function scale_area(tangents,invjac)
     den = sqrt.((tangents .^ 2)' * (invjac .^ 2))
     return 1.0 ./ den
 end
+
+function map_to_spatial(refpoints,refcellids,mesh)
+    dim,numpts = size(refpoints)
+    spatialpoints = zeros(dim,numpts)
+    for idx in 1:numpts
+        cellid = refcellids[idx]
+        cellmap = cell_map(mesh,cellid)
+        spatialpoints[:,idx] = cellmap(refpoints[:,idx])
+    end
+    return spatialpoints
+end

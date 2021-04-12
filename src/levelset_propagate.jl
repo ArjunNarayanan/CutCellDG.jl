@@ -146,48 +146,43 @@ function BoundaryPaddedLevelSet(
     spatialseedpoints,
     seedcellids,
     levelset,
-    cutmesh,
     tol,
     boundingradius,
 )
 
     bottomghostdist = distance_to_zero_levelset(
-        paddedmesh.bottomghostcoords,
+        bottom_ghost_coordinates(paddedmesh),
         refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
-        cutmesh,
         tol,
         boundingradius,
     )
     rightghostdist = distance_to_zero_levelset(
-        paddedmesh.rightghostcoords,
+        right_ghost_coordinates(paddedmesh),
         refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
-        cutmesh,
         tol,
         boundingradius,
     )
     topghostdist = distance_to_zero_levelset(
-        paddedmesh.topghostcoords,
+        top_ghost_coordinates(paddedmesh),
         refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
-        cutmesh,
         tol,
         boundingradius,
     )
     leftghostdist = distance_to_zero_levelset(
-        paddedmesh.leftghostcoords,
+        left_ghost_coordinates(paddedmesh),
         refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
-        cutmesh,
         tol,
         boundingradius,
     )
