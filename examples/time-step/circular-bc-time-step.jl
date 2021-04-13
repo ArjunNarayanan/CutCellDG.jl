@@ -83,21 +83,63 @@ nodaldisplacement = nodal_displacement(
     penalty,
 )
 
-refseedpoints, spatialseedpoints, seedcellids =
+refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset_with_interfacequads(interfacequads, mesh)
+spatialseedpoints = CutCellDG.map_to_spatial(
+    refseedpoints[1, :, :],
+    refseedcellids[1, :],
+    CutCellDG.background_mesh(mesh),
+)
 
-spatialseedpoints = spatialseedpoints[1,:,:]
 nodalcoordinates =
     CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
 
-nodesclosestpoints, nodesclosestcellids, nodecpgradients =
-    CutCellDG.closest_reference_points_on_zero_levelset(
+tol = 1e-12
+boundingradius = 4.5
+refclosestpoints, refclosestcellids =
+    CutCellDG.closest_reference_points_on_merged_mesh(
         nodalcoordinates,
         refseedpoints,
         spatialseedpoints,
-        seedcellids,
+        refseedcellids,
         levelset,
         mesh,
-        1e-8,
-        4.5
+        tol,
+        boundingradius,
     )
+
+parentrefclosestpoints = refclosestpoints[2, :, :]
+parentrefclosestcellids = refclosestcellids[2, :]
+
+productrefclosestpoints = refclosestpoints[1, :, :]
+productrefclosestcellids = refclosestcellids[1, :]
+
+parentstrain = CutCellDG.parent_strain(
+    nodaldisplacement,
+    basis,
+    parentrefclosestpoints,
+    parentrefclosestcellids,
+    mesh,
+)
+productstrain = CutCellDG.product_elastic_strain(
+    nodaldisplacement,
+    basis,
+    theta0,
+    productrefclosestpoints,
+    productrefclosestcellids,
+    mesh,
+)
+
+parentstress = CutCellDG.parent_stress(parentstrain,stiffness)
+productstress = CutCellDG.product_stress(productstrain,stiffness,theta0)
+
+
+parentstrainenergy = V02*CutCellDG.strain_energy(parentstress,parentstrain)
+productstrainenergy = V01*CutCellDG.strain_energy(productstress,productstrain)
+
+parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
+parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
+
+productradialtraction =
+    CutCellDG.traction_force_at_points(productstress, normals)
+productsrr = CutCellDG.traction_component(productradialtraction, normals)

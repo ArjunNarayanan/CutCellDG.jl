@@ -244,7 +244,11 @@ function closest_reference_points_on_merged_mesh(
                 refclosestcellids[row, idx] = guesscellid
             catch e
                 println("Newton iteration failed to converge")
-                println("Check levelset function on cell $guesscellid")
+                println("\tQuery point index = $idx")
+                println("\tSeed point index = $sidx")
+                println("\tCellid = $guesscellid")
+
+                println("\tCell sign = $cellsign")
                 throw(e)
             end
         end

@@ -26,10 +26,23 @@ function plane_distance_function(coords, normal, x0)
     return (coords .- x0)' * normal
 end
 
+function closest_point_on_plane(querypoints,normal,x0)
+    normalcomp = vec(normal'*(querypoints .- x0))
+    disp = hcat([c*normal for c in normalcomp]...)
+    return querypoints - disp
+end
+
 function circle_distance_function(coords, center, radius)
     difference = (coords .- center) .^ 2
     distance = radius .- sqrt.(vec(mapslices(sum, difference, dims = 1)))
     return distance
+end
+
+function closest_point_on_arc(querypoints,center,radius)
+    cqpoints = querypoints[1,:] + im*querypoints[2,:]
+    theta = angle.(cqpoints)
+    v = vcat(cos.(theta)',sin.(theta)')
+    return radius*v
 end
 
 function corner_distance_function(x::V, xc) where {V<:AbstractVector}

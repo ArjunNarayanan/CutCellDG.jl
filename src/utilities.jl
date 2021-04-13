@@ -179,3 +179,16 @@ function map_to_spatial(refpoints,refcellids,mesh)
     end
     return spatialpoints
 end
+
+function collect_normals(refpoints,refcellids,levelset)
+    dim,npts = size(refpoints)
+    @assert length(refcellids) == npts
+    normals = zeros(dim,npts)
+    invjac = inverse_jacobian(background_mesh(levelset))
+
+    for (idx,cellid) in enumerate(refcellids)
+        load_coefficients!(levelset,cellid)
+        p = refpoints[:,idx]
+
+    end
+end

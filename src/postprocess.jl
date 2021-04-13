@@ -27,8 +27,6 @@ function interpolate_at_reference_points(
     return interpolatedvals
 end
 
-
-
 function displacement_at_reference_points(
     nodaldisplacement,
     basis,
@@ -114,6 +112,134 @@ function stress_at_reference_points(
     return stress
 end
 
+function symmetric_displacement_gradient(
+    celldisp,
+    basis,
+    point,
+    jac,
+    vectosymmconverter,
+)
+    dim = length(vectosymmconverter)
+    grad = transform_gradient(gradient(basis, point), jac)
+    NK = sum([make_row_matrix(vectosymmconverter[k], grad[:, k]) for k = 1:dim])
+    symmdispgrad = NK * celldisp
+    return symmdispgrad
+end
+
+function plane_strain_at_reference_points(
+    nodaldisplacement,
+    basis,
+    referencepoints,
+    referencecellids,
+    levelsetsign,
+    mesh,
+)
+
+    @assert levelsetsign == +1 || levelsetsign == -1
+    dim = dimension(mesh)
+    dim2, numpts = size(referencepoints)
+    @assert dim == dim2
+    @assert length(referencecellids) == numpts
+
+    strain = zeros(3, numpts)
+    vectosymmconverter = vector_to_symmetric_matrix_converter()
+    jac = jacobian(mesh)
+
+    for i = 1:numpts
+        cellid = referencecellids[i]
+        nodeids = nodal_connectivity(mesh, levelsetsign, cellid)
+        celldofs = element_dofs(nodeids, dim)
+        celldisp = nodaldisplacement[celldofs]
+        point = referencepoints[:, i]
+
+        strain[:, i] .= symmetric_displacement_gradient(
+            celldisp,
+            basis,
+            point,
+            jac,
+            vectosymmconverter,
+        )
+    end
+    return strain
+end
+
+function parent_strain(
+    nodaldisplacement,
+    basis,
+    referencepoints,
+    referencecellids,
+    mesh,
+)
+
+    strain = plane_strain_at_reference_points(
+        nodaldisplacement,
+        basis,
+        referencepoints,
+        referencecellids,
+        -1,
+        mesh,
+    )
+    ndofs, numpts = size(strain)
+    return vcat(strain, zeros(numpts)')
+end
+
+function product_elastic_strain(
+    nodaldisplacement,
+    basis,
+    theta0,
+    referencepoints,
+    referencecellids,
+    mesh,
+)
+
+    strain = plane_strain_at_reference_points(
+        nodaldisplacement,
+        basis,
+        referencepoints,
+        referencecellids,
+        +1,
+        mesh,
+    )
+    ndofs,numpts = size(strain)
+    planestrain = vcat(strain,zeros(numpts)')
+    planestrain[[1,2,4],:] .-= theta0/3
+
+    return planestrain
+end
+
+function parent_stress(symmdispgrad, stiffness)
+    lambda, mu = lame_coefficients(stiffness, -1)
+
+    inplanestress = stiffness[-1] * symmdispgrad[1:3, :]
+    s33 = lambda * (symmdispgrad[1, :] + symmdispgrad[2, :])
+
+    return vcat(inplanestress, s33')
+end
+
+function product_stress(elasticstrain, stiffness, theta0)
+    lambda, mu = lame_coefficients(stiffness, +1)
+
+    inplanestress = stiffness[+1] * elasticstrain[1:3, :]
+    inplanecorrection = lambda * elasticstrain[4, :]
+
+    inplanestress[1, :] .+= inplanecorrection
+    inplanestress[2, :] .+= inplanecorrection
+
+    s33 =
+        (lambda + 2mu) * elasticstrain[4, :] +
+        lambda * (elasticstrain[1, :] + elasticstrain[2, :])
+
+    return vcat(inplanestress,s33')
+end
+
+function strain_energy(stress,strain)
+    product = stress .* strain
+    return 0.5*vec(sum(product,dims=1))
+end
+
+
+
+
 function traction_force(stressvector, normal)
     return [
         stressvector[1] * normal[1] + stressvector[3] * normal[2],
@@ -132,9 +258,9 @@ function traction_force_at_points(stresses, normals)
     return tractionforce
 end
 
-function traction_component(traction,normal)
+function traction_component(traction, normal)
     component = traction .* normal
-    return vec(sum(component,dims=1))
+    return vec(sum(component, dims = 1))
 end
 
 function pressure_at_points(stress)
@@ -182,5 +308,5 @@ function stress_inner_product(stress)
 end
 
 function dilatation(strain)
-    return strain[1,:] + strain[2,:] + strain[4,:]
+    return strain[1, :] + strain[2, :] + strain[4, :]
 end
