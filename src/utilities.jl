@@ -34,8 +34,8 @@ function widths(mesh::UniformMesh)
     return mesh.widths
 end
 
-function widths(mesh)
-    return widths(background_mesh(mesh))
+function mesh_widths(mesh)
+    return mesh_widths(background_mesh(mesh))
 end
 
 function nodes_per_mesh_side(mesh)

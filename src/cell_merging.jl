@@ -171,6 +171,7 @@ end
 
 function merge_cell_with_suitable_neighbor!(
     mergedwithcell,
+    mergedirection,
     cellquads,
     facequads,
     interfacequads,
@@ -184,7 +185,7 @@ function merge_cell_with_suitable_neighbor!(
 )
     row = cell_sign_to_row(cellsign)
 
-    nbrcellids = cell_connectivity(background_mesh(cutmesh), :, cellid)
+    nbrcellids = cell_connectivity(cutmesh, :, cellid)
     nbrareas =
         [nbrid == 0 ? 0.0 : quadareas[row, nbrid] for nbrid in nbrcellids]
 
@@ -199,6 +200,8 @@ function merge_cell_with_suitable_neighbor!(
     @assert nbrcellsign == cellsign || nbrcellsign == 0 "Attempted to merge with cell of different phase"
 
     merge_cells!(mergedwithcell, cellsign, mergecellid, cellid)
+    mergedirection[row,cellid] = oppositeface
+
     map_and_update_cell_quadrature!(
         cellquads,
         cellsign,
@@ -223,12 +226,20 @@ function merge_cell_with_suitable_neighbor!(
 end
 
 struct MergedMesh
-    mergedwithcell::Any
     cutmesh::Any
+    mergedwithcell::Any
+    mergedirection::Any
+    mergemapper::Any
     nodelabeltonodeid::Any
     numnodes::Any
     hasmergedcells::Any
-    function MergedMesh(cutmesh, mergedwithcell, hasmergedcells)
+    function MergedMesh(
+        cutmesh,
+        mergedwithcell,
+        mergedirection,
+        mergemapper,
+        hasmergedcells,
+    )
         activenodelabels = active_node_labels(cutmesh, mergedwithcell)
         maxlabel = maximum(activenodelabels)
         nodelabeltonodeid = zeros(Int, maxlabel)
@@ -237,8 +248,10 @@ struct MergedMesh
         end
         numnodes = length(activenodelabels)
         new(
-            mergedwithcell,
             cutmesh,
+            mergedwithcell,
+            mergedirection,
+            mergemapper,
             nodelabeltonodeid,
             numnodes,
             hasmergedcells,
@@ -255,75 +268,22 @@ function MergedMesh(
 )
 
     @assert typeof(background_mesh(cutmesh)) == DGMesh
-    mergedwithcell, hasmergedcells = merge_tiny_cells_in_mesh!(
+    mergedwithcell, mergedirection, mergemapper, hasmergedcells =
+        merge_tiny_cells_in_mesh!(
+            cutmesh,
+            cellquads,
+            facequads,
+            interfacequads,
+            tinyratio,
+        )
+
+    return MergedMesh(
         cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-        tinyratio,
+        mergedwithcell,
+        mergedirection,
+        mergemapper,
+        hasmergedcells,
     )
-
-    return MergedMesh(cutmesh, mergedwithcell, hasmergedcells)
-end
-
-function merge_tiny_cells_in_mesh!(
-    cutmesh,
-    cellquads,
-    facequads,
-    interfacequads,
-    tinyratio,
-)
-    ncells = number_of_cells(cutmesh)
-
-    mergemapper = MergeMapper()
-    mergedwithcell = vcat((1:ncells)', (1:ncells)')
-    quadareas = quadrature_areas(cellquads, cutmesh)
-    tinyarea = tinyratio * sum(weights(uniform_cell_quadrature(cellquads)))
-    istinycell = is_tiny_cell(cutmesh, quadareas, tinyarea)
-    hasmergedcells = reduce(|, istinycell)
-    nfaces = number_of_faces_per_cell(facequads)
-
-    for cellid = 1:ncells
-        s = cell_sign(cutmesh, cellid)
-        if s == +1 || s == 0
-            row = cell_sign_to_row(+1)
-            if istinycell[row, cellid]
-                hasmergedcells = true
-                merge_cell_with_suitable_neighbor!(
-                    mergedwithcell,
-                    cellquads,
-                    facequads,
-                    interfacequads,
-                    cutmesh,
-                    quadareas,
-                    istinycell,
-                    +1,
-                    cellid,
-                    nfaces,
-                    mergemapper,
-                )
-            end
-        end
-        if s == -1 || s == 0
-            row = cell_sign_to_row(-1)
-            if istinycell[row, cellid]
-                merge_cell_with_suitable_neighbor!(
-                    mergedwithcell,
-                    cellquads,
-                    facequads,
-                    interfacequads,
-                    cutmesh,
-                    quadareas,
-                    istinycell,
-                    -1,
-                    cellid,
-                    nfaces,
-                    mergemapper,
-                )
-            end
-        end
-    end
-    return mergedwithcell, hasmergedcells
 end
 
 function has_merged_cells(mergedmesh::MergedMesh)
@@ -363,11 +323,84 @@ function nodal_connectivity(mergedmesh::MergedMesh, cellsign, cellid)
     return mergedmesh.nodelabeltonodeid[nodelabels]
 end
 
+function merge_direction(mergedmesh::MergedMesh,cellsign,cellid)
+    row = cell_sign_to_row(cellsign)
+    return mergedmesh.mergedirection[row,cellid]
+end
+
+function merge_mapper(mergedmesh::MergedMesh)
+    return mergedmesh.mergemapper
+end
+
 function Base.show(io::IO, mergedmesh::MergedMesh)
     ncells = number_of_cells(mergedmesh)
     numnodes = number_of_nodes(mergedmesh)
     str = "MergedMesh\n\tNum. Cells: $ncells\n\tNum. Nodes: $numnodes"
     print(io, str)
+end
+
+function merge_tiny_cells_in_mesh!(
+    cutmesh,
+    cellquads,
+    facequads,
+    interfacequads,
+    tinyratio,
+)
+    ncells = number_of_cells(cutmesh)
+
+    mergemapper = MergeMapper()
+    mergedwithcell = vcat((1:ncells)', (1:ncells)')
+    mergedirection = zeros(Int,2,ncells)
+
+    quadareas = quadrature_areas(cellquads, cutmesh)
+    tinyarea = tinyratio * sum(weights(uniform_cell_quadrature(cellquads)))
+    istinycell = is_tiny_cell(cutmesh, quadareas, tinyarea)
+    hasmergedcells = reduce(|, istinycell)
+    nfaces = number_of_faces_per_cell(facequads)
+
+    for cellid = 1:ncells
+        s = cell_sign(cutmesh, cellid)
+        if s == +1 || s == 0
+            row = cell_sign_to_row(+1)
+            if istinycell[row, cellid]
+                hasmergedcells = true
+                merge_cell_with_suitable_neighbor!(
+                    mergedwithcell,
+                    mergedirection,
+                    cellquads,
+                    facequads,
+                    interfacequads,
+                    cutmesh,
+                    quadareas,
+                    istinycell,
+                    +1,
+                    cellid,
+                    nfaces,
+                    mergemapper,
+                )
+            end
+        end
+        if s == -1 || s == 0
+            row = cell_sign_to_row(-1)
+            if istinycell[row, cellid]
+                merge_cell_with_suitable_neighbor!(
+                    mergedwithcell,
+                    mergedirection,
+                    cellquads,
+                    facequads,
+                    interfacequads,
+                    cutmesh,
+                    quadareas,
+                    istinycell,
+                    -1,
+                    cellid,
+                    nfaces,
+                    mergemapper,
+                )
+            end
+        end
+    end
+    return mergedwithcell, mergedirection, mergemapper, hasmergedcells
 end
 
 function active_node_labels(cutmesh, mergedwithcell)

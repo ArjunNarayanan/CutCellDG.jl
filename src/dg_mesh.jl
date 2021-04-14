@@ -65,7 +65,7 @@ function Base.show(io::IO, dgmesh::DGMesh)
     print(io, str)
 end
 
-function elements_per_mesh_side(mesh)
+function elements_per_mesh_side(mesh::DGMesh)
     return mesh.nelements
 end
 
