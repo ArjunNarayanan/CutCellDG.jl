@@ -64,7 +64,7 @@ function construct_mesh_and_quadratures(
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh =
-        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
 
     return mergedmesh, cellquads, facequads, interfacequads
 end

@@ -36,7 +36,7 @@ function test_merged_simple_tension()
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh =
-        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
     @assert CutCellDG.has_merged_cells(mergedmesh)
 
     lambda, mu = (1.0, 2.0)

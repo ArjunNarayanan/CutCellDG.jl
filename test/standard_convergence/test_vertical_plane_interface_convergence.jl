@@ -56,7 +56,7 @@ function error_for_plane_interface(
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh =
-        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()

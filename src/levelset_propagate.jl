@@ -12,7 +12,7 @@ end
 function BoundaryPaddedMesh(mesh, numghostlayers)
     x0 = reference_corner(mesh)
     nfmside = nodes_per_mesh_side(mesh)
-    meshwidths = widths(mesh)
+    meshwidths = mesh_widths(mesh)
 
     gridsize = meshwidths ./ (nfmside .- 1)
 

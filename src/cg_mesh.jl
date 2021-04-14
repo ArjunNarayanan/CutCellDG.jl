@@ -18,7 +18,7 @@ function CGMesh(mesh, nodesperelement)
     dim = dimension(mesh)
     cellmaps = construct_cell_maps(mesh)
     x0 = reference_corner(mesh)
-    meshwidths = widths(mesh)
+    meshwidths = mesh_widths(mesh)
     nelements = elements_per_mesh_side(mesh)
     elementsize = meshwidths ./ nelements
     nfeside = nodes_per_element_side(nodesperelement)
@@ -26,7 +26,7 @@ function CGMesh(mesh, nodesperelement)
     numnodes = prod(nfmside)
 
     nodalcoordinates =
-        cg_nodal_coordinates(x0, widths(mesh), nelements, nfmside)
+        cg_nodal_coordinates(x0, mesh_widths(mesh), nelements, nfmside)
     nodalconnectivity =
         cg_nodal_connectivity(nfmside, nfeside, nodesperelement, nelements)
     cellconnectivity = cell_connectivity(mesh)

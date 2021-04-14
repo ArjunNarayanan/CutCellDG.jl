@@ -24,7 +24,7 @@ function DGMesh(mesh, refcoords)
     nodalconnectivity = dg_nodal_connectivity(numcells, nodesperelement)
     cellconnectivity = cell_connectivity(mesh)
     x0 = reference_corner(mesh)
-    meshwidths = widths(mesh)
+    meshwidths = mesh_widths(mesh)
     nelements = elements_per_mesh_side(mesh)
 
     DGMesh(

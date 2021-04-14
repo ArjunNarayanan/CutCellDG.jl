@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
 include("../useful_routines.jl")
 
@@ -66,7 +66,7 @@ cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
 interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-mergedmesh = CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+mergedmesh = CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
 @test CutCellDG.number_of_nodes(mergedmesh) == 8
 @test CutCellDG.has_merged_cells(mergedmesh)
 @test CutCellDG.merge_direction(mergedmesh,+1,1) == 0
