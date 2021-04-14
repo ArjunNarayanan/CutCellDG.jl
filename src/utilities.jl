@@ -2,7 +2,9 @@ function interpolation_points(basis::TensorProductBasis)
     return basis.points
 end
 
-function number_of_basis_functions(basis::TensorProductBasis{dim,T,NF}) where {dim,T,NF}
+function number_of_basis_functions(
+    basis::TensorProductBasis{dim,T,NF},
+) where {dim,T,NF}
 
     return NF
 end
@@ -43,12 +45,13 @@ function nodes_per_mesh_side(mesh)
 end
 
 function cell_sign_to_row(s)
-    (s == -1 || s == +1) || error("Use ±1 to index into rows (i.e. phase), got index = $s")
+    (s == -1 || s == +1) ||
+        error("Use ±1 to index into rows (i.e. phase), got index = $s")
     row = s == +1 ? 1 : 2
     return row
 end
 
-function levelset_coefficients(distancefunc,mesh)
+function levelset_coefficients(distancefunc, mesh)
     nodalcoordinates = nodal_coordinates(mesh)
     return distancefunc(nodalcoordinates)
 end
@@ -66,10 +69,10 @@ function levelset_normals(levelset, points, invjac)
 end
 
 function normalize_normals!(normals)
-    dim,npts = size(normals)
+    dim, npts = size(normals)
     for i = 1:npts
-        n = normals[:,i]
-        normals[:,i] .= n/norm(n)
+        n = normals[:, i]
+        normals[:, i] .= n / norm(n)
     end
 end
 
@@ -111,16 +114,16 @@ function face_determinant_jacobian(mesh)
     return face_determinant_jacobian(background_mesh(mesh))
 end
 
-function cell_connectivity(mesh,faceid,cellid)
-    return cell_connectivity(background_mesh(mesh),faceid,cellid)
+function cell_connectivity(mesh, faceid, cellid)
+    return cell_connectivity(background_mesh(mesh), faceid, cellid)
 end
 
 function reference_face_normals()
-    n1 = [0.,-1.]
-    n2 = [1.,0.]
-    n3 = [0.,1.]
-    n4 = [-1.,0.]
-    return [n1,n2,n3,n4]
+    n1 = [0.0, -1.0]
+    n2 = [1.0, 0.0]
+    n3 = [0.0, 1.0]
+    n4 = [-1.0, 0.0]
+    return [n1, n2, n3, n4]
 end
 
 function reference_bottom_face_midpoint()
@@ -164,35 +167,82 @@ function rotate_90(normals)
     return rot * normals
 end
 
-function scale_area(tangents,invjac)
+function scale_area(tangents, invjac)
     den = sqrt.((tangents .^ 2)' * (invjac .^ 2))
     return 1.0 ./ den
 end
 
-function map_to_spatial(refpoints,refcellids,mesh)
-    dim,numpts = size(refpoints)
-    spatialpoints = zeros(dim,numpts)
-    for idx in 1:numpts
+function map_to_spatial(refpoints, refcellids, mesh)
+
+    dim, numpts = size(refpoints)
+    @assert length(refcellids) == numpts
+    spatialpoints = zeros(dim, numpts)
+
+    for idx = 1:numpts
         cellid = refcellids[idx]
-        cellmap = cell_map(mesh,cellid)
-        spatialpoints[:,idx] = cellmap(refpoints[:,idx])
+        cellmap = cell_map(mesh, cellid)
+        spatialpoints[:, idx] = cellmap(refpoints[:, idx])
     end
     return spatialpoints
 end
 
-function collect_normals(refpoints,refcellids,levelset)
-    dim,npts = size(refpoints)
+function map_to_spatial_on_merged_mesh(
+    refpoints,
+    refcellids,
+    levelsetsign,
+    mesh,
+)
+
+    dim, numpts = size(refpoints)
+    @assert length(refcellids) == numpts
+    spatialpoints = zeros(dim, numpts)
+
+    for idx = 1:numpts
+        cellid = refcellids[idx]
+        cellmap = cell_map(mesh, levelsetsign, cellid)
+        spatialpoints[:, idx] = cellmap(refpoints[:, idx])
+    end
+    return spatialpoints
+end
+
+function map_reference_points_to_merged_mesh(
+    refpoints,
+    refcellids,
+    levelsetsign,
+    mergedmesh,
+)
+
+    dim, numpts = size(refpoints)
+    @assert length(refcellids) == numpts
+    mappedrefpoints = copy(refpoints)
+    mergemapper = merge_mapper(mergedmesh)
+
+    for (idx, cellid) in enumerate(refcellids)
+        mergecellid = solution_cell_id(mergedmesh, levelsetsign, cellid)
+        if mergecellid != cellid
+            mergedirection = merge_direction(mergedmesh, levelsetsign, cellid)
+            @assert mergedirection != 0
+
+            mappedrefpoints[:, idx] =
+                mergemapper[mergedirection](refpoints[:, idx])
+        end
+    end
+    return mappedrefpoints
+end
+
+function collect_normals(refpoints, refcellids, levelset)
+    dim, npts = size(refpoints)
     @assert length(refcellids) == npts
-    normals = zeros(dim,npts)
+    normals = zeros(dim, npts)
     invjac = inverse_jacobian(background_mesh(levelset))
 
-    for (idx,cellid) in enumerate(refcellids)
-        load_coefficients!(levelset,cellid)
-        p = refpoints[:,idx]
+    for (idx, cellid) in enumerate(refcellids)
+        load_coefficients!(levelset, cellid)
+        p = refpoints[:, idx]
 
-        normals[:,idx] = gradient(interpolater(levelset),p)
+        normals[:, idx] = gradient(interpolater(levelset), p)
     end
-    normals = diagm(invjac)*normals
+    normals = diagm(invjac) * normals
     normalize_normals!(normals)
     return normals
 end

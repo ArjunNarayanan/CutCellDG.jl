@@ -259,7 +259,7 @@ struct MergedMesh
     end
 end
 
-function MergedMesh(
+function MergedMesh!(
     cutmesh,
     cellquads,
     facequads,

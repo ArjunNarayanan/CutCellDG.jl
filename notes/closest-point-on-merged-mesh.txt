@@ -1,0 +1,3 @@
+Remove seeding with interface quadratures
+Change closest point on merged mesh to first find closest points on
+  background mesh and then use the mergemapper to map to merged mesh
