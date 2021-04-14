@@ -19,7 +19,7 @@ function nodal_displacement(
     eta = 1,
 )
 
-    L, W = CutCellDG.widths(mesh)
+    L, W = CutCellDG.mesh_widths(mesh)
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     transfstress =
         CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
@@ -126,9 +126,9 @@ function construct_mesh_and_quadratures(
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh =
-        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
+        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
 
-    return mergedmesh, cellquads, facequads, interfacequads
+    return mergedmesh, cellquads, facequads, interfacequads, levelset
 end
 
 function construct_unmerged_mesh_and_quadratures(

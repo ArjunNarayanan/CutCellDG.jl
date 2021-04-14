@@ -163,7 +163,7 @@ function construct_mesh_and_quadratures(
         interfacequads,
         tinyratio = tinyratio,
     )
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh = CutCellDG.MergedMesh!(cutmesh, mergedwithcell)
 
     return mergedmesh, cellquads, facequads, interfacequads
 end

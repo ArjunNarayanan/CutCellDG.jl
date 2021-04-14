@@ -1,5 +1,4 @@
-# using LinearAlgebra
-# using PyPlot
+using PyPlot
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -19,7 +18,7 @@ function angular_position(points)
 end
 
 polyorder = 3
-nelmts = 33
+nelmts = 17
 penaltyfactor = 1e2
 
 folderpath = "examples/potential/circular-bc/"
@@ -70,14 +69,15 @@ analyticalsolution = PS.CylindricalSolver(
     theta0,
 )
 
-mesh, cellquads, facequads, interfacequads = construct_mesh_and_quadratures(
-    meshwidth,
-    nelmts,
-    basis,
-    interfacecenter,
-    interfaceradius,
-    numqp,
-)
+mesh, cellquads, facequads, interfacequads, levelset =
+    construct_mesh_and_quadratures(
+        meshwidth,
+        nelmts,
+        basis,
+        interfacecenter,
+        interfaceradius,
+        numqp,
+    )
 
 nodaldisplacement = nodal_displacement(
     mesh,
@@ -91,8 +91,9 @@ nodaldisplacement = nodal_displacement(
     penalty,
 )
 
+cutmesh = CutCellDG.background_mesh(mesh)
 refseedpoints, refseedcellids =
-    CutCellDG.seed_zero_levelset_with_interfacequads(interfacequads, mesh)
+    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialpoints = CutCellDG.map_to_spatial(
     refseedpoints[1, :, :],
     refseedcellids[1, :],

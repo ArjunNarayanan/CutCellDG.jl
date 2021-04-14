@@ -84,119 +84,119 @@ nodaldisplacement = nodal_displacement(
     penalty,
 )
 
+cutmesh = CutCellDG.background_mesh(mesh)
 refseedpoints, refseedcellids =
-    CutCellDG.seed_zero_levelset_with_interfacequads(interfacequads, mesh)
-spatialseedpoints = CutCellDG.map_to_spatial(
-    refseedpoints[1, :, :],
-    refseedcellids[1, :],
-    CutCellDG.background_mesh(mesh),
-)
+    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+spatialseedpoints =
+    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
 
-nodalcoordinates =
-    CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
+querypoints = CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
 
-tol = 1e-10
+tol = 1e4eps()
 boundingradius = 4.5
 refclosestpoints, refclosestcellids =
-    CutCellDG.closest_reference_points_on_merged_mesh(
-        nodalcoordinates,
+    CutCellDG.closest_reference_points_on_levelset(
+        querypoints,
         refseedpoints,
         spatialseedpoints,
         refseedcellids,
         levelset,
-        mesh,
         tol,
         boundingradius,
     )
+spatialclosestpoints =
+    CutCellDG.map_to_spatial(refclosestpoints, refclosestcellids, cutmesh)
+normals =
+    CutCellDG.collect_normals(refclosestpoints, refclosestcellids, levelset)
 
+angularposition = angular_position(spatialclosestpoints)
+sortidx = sortperm(angularposition)
 
-parentrefclosestpoints = refclosestpoints[2, :, :]
-parentrefclosestcellids = refclosestcellids[2, :]
+spatialclosestpoints = spatialclosestpoints[:, sortidx]
+refclosestpoints = refclosestpoints[:, sortidx]
+refclosestcellids = refclosestcellids[sortidx]
 
-productrefclosestpoints = refclosestpoints[1, :, :]
-productrefclosestcellids = refclosestcellids[1, :]
-
-parentspatialpoints = CutCellDG.map_to_spatial(
-    parentrefclosestpoints,
-    parentrefclosestcellids,
-    CutCellDG.background_mesh(mesh),
+parentclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
+    refclosestpoints,
+    refclosestcellids,
+    -1,
+    mesh,
 )
-productspatialpoints = CutCellDG.map_to_spatial(
-    productrefclosestpoints,
-    productrefclosestcellids,
-    CutCellDG.background_mesh(mesh),
+productclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
+    refclosestpoints,
+    refclosestcellids,
+    +1,
+    mesh,
 )
 
 
-parentangularposition = angular_position(parentspatialpoints)
-productangularposition = angular_position(productspatialpoints)
 
-parentsortidx = sortperm(parentangularposition)
-productsortidx = sortperm(productangularposition)
+parentstrain = CutCellDG.parent_strain(
+    nodaldisplacement,
+    basis,
+    parentclosestrefpoints,
+    refclosestcellids,
+    mesh,
+)
+productstrain = CutCellDG.product_elastic_strain(
+    nodaldisplacement,
+    basis,
+    theta0,
+    productclosestrefpoints,
+    refclosestcellids,
+    mesh,
+)
+
+parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
+productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
+
+
+parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
+productstrainenergy =
+    V01 * CutCellDG.strain_energy(productstress, productstrain)
+
+exactparentstrainenergy = PS.core_strain_energy(analyticalsolution, V02)
+exactproductstrainenergy =
+    PS.shell_strain_energy(analyticalsolution, interfaceradius, V01)
+
+
+parenterr = maximum(abs.(parentstrainenergy .- exactparentstrainenergy))
+producterr = maximum(abs.(productstrainenergy .- exactproductstrainenergy))
+
+
+
+parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
+parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
+
+productradialtraction =
+    CutCellDG.traction_force_at_points(productstress, normals)
+productsrr = CutCellDG.traction_component(productradialtraction, normals)
+
+parentdilatation = CutCellDG.dilatation(parentstrain)
+productdilatation = CutCellDG.dilatation(productstrain)
+
+parentcompwork = V02 * (1 .+ parentdilatation) .* parentsrr
+productcompwork = V01 * (1 .+ productdilatation) .* productsrr
+
+exactparentcompwork = PS.core_compression_work(analyticalsolution, V02)
+exactproductcompwork =
+    PS.shell_compression_work(analyticalsolution, interfaceradius, V01)
+
+parenterr = maximum(abs.(parentcompwork .- exactparentcompwork))
+producterr = maximum(abs.(productcompwork .- exactproductcompwork))
 
 
 
 
+parentpotential = parentstrainenergy - parentcompwork
+productpotential = productstrainenergy - productcompwork
 
-# parentnormals = CutCellDG.collect_normals(
-#     parentrefclosestpoints,
-#     parentrefclosestcellids,
-#     levelset,
-# )
-# productnormals = CutCellDG.collect_normals(
-#     productrefclosestpoints,
-#     productrefclosestcellids,
-#     levelset,
-# )
-#
-# parentstrain = CutCellDG.parent_strain(
-#     nodaldisplacement,
-#     basis,
-#     parentrefclosestpoints,
-#     parentrefclosestcellids,
-#     mesh,
-# )
-# productstrain = CutCellDG.product_elastic_strain(
-#     nodaldisplacement,
-#     basis,
-#     theta0,
-#     productrefclosestpoints,
-#     productrefclosestcellids,
-#     mesh,
-# )
-#
-# parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
-# productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
-#
+potentialdifference = (productpotential - parentpotential) * 1e9 / abs(ΔG0)
 
-# parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
-# productstrainenergy =
-#     V01 * CutCellDG.strain_energy(productstress, productstrain)
-#
-# parentradialtraction =
-#     CutCellDG.traction_force_at_points(parentstress, parentnormals)
-# parentsrr = CutCellDG.traction_component(parentradialtraction, parentnormals)
-#
-# productradialtraction =
-#     CutCellDG.traction_force_at_points(productstress, productnormals)
-# productsrr = CutCellDG.traction_component(productradialtraction, productnormals)
-#
-# parentdilatation = CutCellDG.dilatation(parentstrain)
-# productdilatation = CutCellDG.dilatation(productstrain)
-#
-# parentcompwork = V02 * (1 .+ parentdilatation) .* parentsrr
-# productcompwork = V01 * (1 .+ productdilatation) .* productsrr
-#
+
 # exactparentcompwork = PS.core_compression_work(analyticalsolution, V02)
 # exactproductcompwork =
 #     PS.shell_compression_work(analyticalsolution, interfaceradius, V01)
-#
-#
-# parentpotential = parentstrainenergy - parentcompwork
-# productpotential = productstrainenergy - productcompwork
-#
-# potentialdifference = (productpotential - parentpotential) * 1e9 / abs(ΔG0)
-#
 # exactparentpotential = exactparentstrainenergy - exactparentcompwork
 # exactproductpotential = exactproductstrainenergy - exactproductcompwork
 #
