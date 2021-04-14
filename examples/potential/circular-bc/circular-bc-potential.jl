@@ -1,5 +1,5 @@
-using LinearAlgebra
-using PyPlot
+# using LinearAlgebra
+# using PyPlot
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -18,9 +18,9 @@ function angular_position(points)
     return rad2deg.(angle.(cpoints))
 end
 
-polyorder = 4
-nelmts = 17
-penaltyfactor = 1e1
+polyorder = 3
+nelmts = 33
+penaltyfactor = 1e2
 
 folderpath = "examples/potential/circular-bc/"
 filename =
@@ -91,15 +91,21 @@ nodaldisplacement = nodal_displacement(
     penalty,
 )
 
-refseedpoints, spatialseedpoints, seedcellids =
+refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset_with_interfacequads(interfacequads, mesh)
+spatialpoints = CutCellDG.map_to_spatial(
+    refseedpoints[1, :, :],
+    refseedcellids[1, :],
+    CutCellDG.background_mesh(mesh),
+)
+
 normals = CutCellDG.collect_interface_normals(interfacequads, mesh)
 
-spatialpoints = spatialseedpoints[1, :, :]
+
 productreferencepoints = refseedpoints[1, :, :]
 parentreferencepoints = refseedpoints[2, :, :]
-productreferencecellids = seedcellids[1, :]
-parentreferencecellids = seedcellids[2, :]
+productreferencecellids = refseedcellids[1, :]
+parentreferencecellids = refseedcellids[2, :]
 
 relspatialpoints = spatialpoints .- interfacecenter
 angularposition = angular_position(relspatialpoints)
@@ -168,24 +174,31 @@ potentialdifference = (productpotential - parentpotential) * 1e9 / abs(ΔG0)
 exactpotentialdifference =
     (exactproductpotential - exactparentpotential) * 1e9 / abs(ΔG0)
 
-Δylim = 0.2 * abs(exactpotentialdifference)
-ylim = (exactpotentialdifference - Δylim, exactpotentialdifference + Δylim)
 
-fig, ax = PyPlot.subplots()
-ax.plot(angularposition, potentialdifference, color = "black")
-ax.plot(
-    angularposition,
-    exactpotentialdifference * ones(length(angularposition)),
-    linestyle = "dotted",
-    color = "black",
-)
-ax.grid()
-ax.set_ylim(ylim...)
-ax.set_xlabel("Angular Position (deg)")
-ax.set_ylabel(L"([\Phi] - [G0])/[G0]")
-fig.tight_layout()
-fig
-fig.savefig(folderpath * filename)
+pderr =
+    maximum(abs.(potentialdifference .- exactpotentialdifference)) /
+    abs(exactpotentialdifference)
+
+
+
+# Δylim = 0.2 * abs(exactpotentialdifference)
+# ylim = (exactpotentialdifference - Δylim, exactpotentialdifference + Δylim)
+#
+# fig, ax = PyPlot.subplots()
+# ax.plot(angularposition, potentialdifference, color = "black")
+# ax.plot(
+#     angularposition,
+#     exactpotentialdifference * ones(length(angularposition)),
+#     linestyle = "dotted",
+#     color = "black",
+# )
+# ax.grid()
+# ax.set_ylim(ylim...)
+# ax.set_xlabel("Angular Position (deg)")
+# ax.set_ylabel(L"([\Phi] - [G0])/[G0]")
+# fig.tight_layout()
+# fig
+# fig.savefig(folderpath * filename)
 
 # fig,ax = PyPlot.subplots()
 # numplotpts = length(angularposition)

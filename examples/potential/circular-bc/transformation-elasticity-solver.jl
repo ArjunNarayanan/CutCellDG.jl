@@ -109,8 +109,7 @@ function construct_mesh_and_quadratures(
     basis,
     interfacecenter,
     interfaceradius,
-    numqp;
-    tinyratio = 0.2,
+    numqp
 )
     cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
     mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
@@ -126,14 +125,8 @@ function construct_mesh_and_quadratures(
     interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-    mergedwithcell, hasmergedcells = CutCellDG.merge_tiny_cells_in_mesh!(
-        cutmesh,
-        cellquads,
-        facequads,
-        interfacequads,
-        tinyratio = tinyratio,
-    )
-    mergedmesh = CutCellDG.MergedMesh(cutmesh, mergedwithcell)
+    mergedmesh =
+        CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
 
     return mergedmesh, cellquads, facequads, interfacequads
 end
@@ -276,7 +269,7 @@ function product_stress(elasticstrain, stiffness, theta0)
         (lambda + 2mu) * elasticstrain[4, :] +
         lambda * (elasticstrain[1, :] + elasticstrain[2, :])
 
-    return vcat(inplanestress,s33')
+    return vcat(inplanestress, s33')
 end
 
 
@@ -428,7 +421,7 @@ function deviatoric_stress(stress, press)
     return devstress
 end
 
-function strain_energy(stress,strain)
+function strain_energy(stress, strain)
     product = stress .* strain
-    return 0.5*vec(sum(product,dims=1))
+    return 0.5 * vec(sum(product, dims = 1))
 end

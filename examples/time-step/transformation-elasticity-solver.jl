@@ -108,8 +108,7 @@ function construct_mesh_and_quadratures(
     nelmts,
     basis,
     distancefunction,
-    numqp;
-    tinyratio = 0.2,
+    numqp
 )
     cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
     mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
@@ -125,31 +124,4 @@ function construct_mesh_and_quadratures(
         CutCellDG.MergedMesh(cutmesh, cellquads, facequads, interfacequads)
 
     return mergedmesh, cellquads, facequads, interfacequads, levelset
-end
-
-function construct_unmerged_mesh_and_quadratures(
-    meshwidth,
-    nelmts,
-    basis,
-    interfacecenter,
-    interfaceradius,
-    numqp,
-)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-
-    levelset = InterpolatingPolynomial(1, basis)
-    levelsetcoeffs = CutCellDG.levelset_coefficients(
-        x -> -circle_distance_function(x, interfacecenter, interfaceradius),
-        mesh,
-    )
-
-    cutmesh = CutCellDG.CutMesh(mesh, levelset, levelsetcoeffs)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, levelsetcoeffs, numqp)
-
-    return cutmesh, cellquads, facequads, interfacequads
 end

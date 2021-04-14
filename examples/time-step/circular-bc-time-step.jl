@@ -1,3 +1,4 @@
+using PyPlot
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -94,7 +95,7 @@ spatialseedpoints = CutCellDG.map_to_spatial(
 nodalcoordinates =
     CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
 
-tol = 1e-12
+tol = 1e-10
 boundingradius = 4.5
 refclosestpoints, refclosestcellids =
     CutCellDG.closest_reference_points_on_merged_mesh(
@@ -108,38 +109,107 @@ refclosestpoints, refclosestcellids =
         boundingradius,
     )
 
+
 parentrefclosestpoints = refclosestpoints[2, :, :]
 parentrefclosestcellids = refclosestcellids[2, :]
 
 productrefclosestpoints = refclosestpoints[1, :, :]
 productrefclosestcellids = refclosestcellids[1, :]
 
-parentstrain = CutCellDG.parent_strain(
-    nodaldisplacement,
-    basis,
+parentspatialpoints = CutCellDG.map_to_spatial(
     parentrefclosestpoints,
     parentrefclosestcellids,
-    mesh,
+    CutCellDG.background_mesh(mesh),
 )
-productstrain = CutCellDG.product_elastic_strain(
-    nodaldisplacement,
-    basis,
-    theta0,
+productspatialpoints = CutCellDG.map_to_spatial(
     productrefclosestpoints,
     productrefclosestcellids,
-    mesh,
+    CutCellDG.background_mesh(mesh),
 )
 
-parentstress = CutCellDG.parent_stress(parentstrain,stiffness)
-productstress = CutCellDG.product_stress(productstrain,stiffness,theta0)
+
+parentangularposition = angular_position(parentspatialpoints)
+productangularposition = angular_position(productspatialpoints)
+
+parentsortidx = sortperm(parentangularposition)
+productsortidx = sortperm(productangularposition)
 
 
-parentstrainenergy = V02*CutCellDG.strain_energy(parentstress,parentstrain)
-productstrainenergy = V01*CutCellDG.strain_energy(productstress,productstrain)
 
-parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
-parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
 
-productradialtraction =
-    CutCellDG.traction_force_at_points(productstress, normals)
-productsrr = CutCellDG.traction_component(productradialtraction, normals)
+
+# parentnormals = CutCellDG.collect_normals(
+#     parentrefclosestpoints,
+#     parentrefclosestcellids,
+#     levelset,
+# )
+# productnormals = CutCellDG.collect_normals(
+#     productrefclosestpoints,
+#     productrefclosestcellids,
+#     levelset,
+# )
+#
+# parentstrain = CutCellDG.parent_strain(
+#     nodaldisplacement,
+#     basis,
+#     parentrefclosestpoints,
+#     parentrefclosestcellids,
+#     mesh,
+# )
+# productstrain = CutCellDG.product_elastic_strain(
+#     nodaldisplacement,
+#     basis,
+#     theta0,
+#     productrefclosestpoints,
+#     productrefclosestcellids,
+#     mesh,
+# )
+#
+# parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
+# productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
+#
+
+# parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
+# productstrainenergy =
+#     V01 * CutCellDG.strain_energy(productstress, productstrain)
+#
+# parentradialtraction =
+#     CutCellDG.traction_force_at_points(parentstress, parentnormals)
+# parentsrr = CutCellDG.traction_component(parentradialtraction, parentnormals)
+#
+# productradialtraction =
+#     CutCellDG.traction_force_at_points(productstress, productnormals)
+# productsrr = CutCellDG.traction_component(productradialtraction, productnormals)
+#
+# parentdilatation = CutCellDG.dilatation(parentstrain)
+# productdilatation = CutCellDG.dilatation(productstrain)
+#
+# parentcompwork = V02 * (1 .+ parentdilatation) .* parentsrr
+# productcompwork = V01 * (1 .+ productdilatation) .* productsrr
+#
+# exactparentcompwork = PS.core_compression_work(analyticalsolution, V02)
+# exactproductcompwork =
+#     PS.shell_compression_work(analyticalsolution, interfaceradius, V01)
+#
+#
+# parentpotential = parentstrainenergy - parentcompwork
+# productpotential = productstrainenergy - productcompwork
+#
+# potentialdifference = (productpotential - parentpotential) * 1e9 / abs(ΔG0)
+#
+# exactparentpotential = exactparentstrainenergy - exactparentcompwork
+# exactproductpotential = exactproductstrainenergy - exactproductcompwork
+#
+# exactpotentialdifference =
+#     (exactproductpotential - exactparentpotential) * 1e9 / abs(ΔG0)
+#
+# pderr =
+#     maximum(abs.(potentialdifference .- exactpotentialdifference)) /
+#     abs(exactpotentialdifference)
+#
+# numpts = length(potentialdifference)
+# fig,ax = PyPlot.subplots()
+# ax.scatter(1:numpts,potentialdifference)
+# ax.scatter(1:numpts,exactpotentialdifference*ones(length(potentialdifference)))
+# ax.grid()
+# fig

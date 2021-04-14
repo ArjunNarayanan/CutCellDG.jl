@@ -190,5 +190,9 @@ function collect_normals(refpoints,refcellids,levelset)
         load_coefficients!(levelset,cellid)
         p = refpoints[:,idx]
 
+        normals[:,idx] = gradient(interpolater(levelset),p)
     end
+    normals = diagm(invjac)*normals
+    normalize_normals!(normals)
+    return normals
 end
