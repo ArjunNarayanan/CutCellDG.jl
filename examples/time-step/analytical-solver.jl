@@ -215,6 +215,16 @@ end
 
 ###########################################################################
 
+function interface_potential_difference(solver,V01,V02)
+    cse = core_strain_energy(solver,V02)
+    ccw = core_compression_work(solver,V02)
+
+    sse = shell_strain_energy(solver,solver.inradius,V01)
+    scw = shell_compression_work(solver,solver.inradius,V01)
+
+    return (sse - scw) - (cse - ccw)
+end
+
 function pressure(stress)
     return -1.0 / 3.0 * sum(stress)
 end

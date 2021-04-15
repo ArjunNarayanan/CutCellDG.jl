@@ -5,8 +5,9 @@ using Revise
 using CutCellDG
 include("../../test/useful_routines.jl")
 include("analytical-solver.jl")
-PS = PlaneStrainSolver
 include("transformation-elasticity-solver.jl")
+PS = PlaneStrainSolver
+TES = TransformationElasticitySolver
 
 function lame_lambda(k, m)
     return k - 2m / 3
@@ -19,7 +20,7 @@ end
 
 polyorder = 3
 nelmts = 17
-penaltyfactor = 1e1
+penaltyfactor = 1e3
 
 width = 1.0              # mm
 K1, K2 = 247.0, 192.0    # GPa
@@ -64,7 +65,7 @@ analyticalsolution = PS.CylindricalSolver(
 )
 
 mesh, cellquads, facequads, interfacequads, levelset =
-    construct_mesh_and_quadratures(
+    TES.construct_mesh_and_quadratures(
         meshwidth,
         nelmts,
         basis,
@@ -72,7 +73,7 @@ mesh, cellquads, facequads, interfacequads, levelset =
         numqp,
     )
 
-nodaldisplacement = nodal_displacement(
+nodaldisplacement = TES.nodal_displacement(
     mesh,
     basis,
     cellquads,
@@ -84,132 +85,92 @@ nodaldisplacement = nodal_displacement(
     penalty,
 )
 
+querypoints = CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
 cutmesh = CutCellDG.background_mesh(mesh)
 refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
 
-querypoints = CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
+potentialdifference =
+    (
+        ΔG0 .+
+        1e9 * TES.potential_difference_at_closest_points(
+            querypoints,
+            nodaldisplacement,
+            basis,
+            refseedpoints,
+            refseedcellids,
+            spatialseedpoints,
+            mesh,
+            levelset,
+            stiffness,
+            theta0,
+            V01,
+            V02,
+        )
+    ) / abs(ΔG0)
 
-tol = 1e4eps()
-boundingradius = 4.5
-refclosestpoints, refclosestcellids =
-    CutCellDG.closest_reference_points_on_levelset(
-        querypoints,
-        refseedpoints,
-        spatialseedpoints,
-        refseedcellids,
-        levelset,
-        tol,
-        boundingradius,
-    )
-spatialclosestpoints =
-    CutCellDG.map_to_spatial(refclosestpoints, refclosestcellids, cutmesh)
-normals =
-    CutCellDG.collect_normals(refclosestpoints, refclosestcellids, levelset)
-
-angularposition = angular_position(spatialclosestpoints)
-sortidx = sortperm(angularposition)
-
-spatialclosestpoints = spatialclosestpoints[:, sortidx]
-refclosestpoints = refclosestpoints[:, sortidx]
-refclosestcellids = refclosestcellids[sortidx]
-
-parentclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
-    refclosestpoints,
-    refclosestcellids,
-    -1,
-    mesh,
-)
-productclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
-    refclosestpoints,
-    refclosestcellids,
-    +1,
-    mesh,
+paddedmesh =
+    CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
+tol = 1e-3
+boundingradius = 10.0
+paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
+    paddedmesh,
+    refseedpoints,
+    spatialseedpoints,
+    refseedcellids,
+    levelset,
+    tol,
+    boundingradius,
 )
 
+bgmesh = CutCellDG.background_mesh(levelset)
+bgcoords = CutCellDG.bottom_ghost_coordinates(paddedmesh)
+xq = bgcoords[:, 2]
 
+using NearestNeighbors
+tree = KDTree(spatialseedpoints)
+seedidx, seeddists = nn(tree, xq)
+guesscellid = refseedcellids[seedidx]
+xg = refseedpoints[:, seedidx]
+cellmap = CutCellDG.cell_map(bgmesh, guesscellid)
+CutCellDG.load_coefficients!(levelset, guesscellid)
+poly = CutCellDG.interpolater(levelset)
 
-parentstrain = CutCellDG.parent_strain(
-    nodaldisplacement,
-    basis,
-    parentclosestrefpoints,
-    refclosestcellids,
-    mesh,
+refcp = CutCellDG.saye_newton_iterate(
+    xg,
+    xq,
+    poly,
+    x -> vec(gradient(poly, x)),
+    x -> CutCellDG.hessian_matrix(poly, x),
+    cellmap,
+    1e-5,
+    7.0,
 )
-productstrain = CutCellDG.product_elastic_strain(
-    nodaldisplacement,
-    basis,
-    theta0,
-    productclosestrefpoints,
-    refclosestcellids,
-    mesh,
-)
 
-parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
-productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
+using Plots
+xrange = -1.5:1e-2:1.5
+Plots.contour(xrange, xrange, (x, y) -> levelset([x, y]), levels = [0.0])
+Plots.scatter!([xg[1]], [xg[2]])
 
-
-parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
-productstrainenergy =
-    V01 * CutCellDG.strain_energy(productstress, productstrain)
-
-exactparentstrainenergy = PS.core_strain_energy(analyticalsolution, V02)
-exactproductstrainenergy =
-    PS.shell_strain_energy(analyticalsolution, interfaceradius, V01)
-
-
-parenterr = maximum(abs.(parentstrainenergy .- exactparentstrainenergy))
-producterr = maximum(abs.(productstrainenergy .- exactproductstrainenergy))
-
-
-
-parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
-parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
-
-productradialtraction =
-    CutCellDG.traction_force_at_points(productstress, normals)
-productsrr = CutCellDG.traction_component(productradialtraction, normals)
-
-parentdilatation = CutCellDG.dilatation(parentstrain)
-productdilatation = CutCellDG.dilatation(productstrain)
-
-parentcompwork = V02 * (1 .+ parentdilatation) .* parentsrr
-productcompwork = V01 * (1 .+ productdilatation) .* productsrr
-
-exactparentcompwork = PS.core_compression_work(analyticalsolution, V02)
-exactproductcompwork =
-    PS.shell_compression_work(analyticalsolution, interfaceradius, V01)
-
-parenterr = maximum(abs.(parentcompwork .- exactparentcompwork))
-producterr = maximum(abs.(productcompwork .- exactproductcompwork))
-
-
-
-
-parentpotential = parentstrainenergy - parentcompwork
-productpotential = productstrainenergy - productcompwork
-
-potentialdifference = (productpotential - parentpotential) * 1e9 / abs(ΔG0)
-
-
-# exactparentcompwork = PS.core_compression_work(analyticalsolution, V02)
-# exactproductcompwork =
-#     PS.shell_compression_work(analyticalsolution, interfaceradius, V01)
-# exactparentpotential = exactparentstrainenergy - exactparentcompwork
-# exactproductpotential = exactproductstrainenergy - exactproductcompwork
-#
 # exactpotentialdifference =
-#     (exactproductpotential - exactparentpotential) * 1e9 / abs(ΔG0)
-#
+#     (ΔG0 + 1e9*PS.interface_potential_difference(analyticalsolution,V01,V02))/abs(ΔG0)
+
 # pderr =
 #     maximum(abs.(potentialdifference .- exactpotentialdifference)) /
 #     abs(exactpotentialdifference)
-#
+# println("Normalized error in potential difference = $pderr")
+
+# Δylim = 0.1 * abs(exactpotentialdifference)
+# fig, ax = PyPlot.subplots()
 # numpts = length(potentialdifference)
-# fig,ax = PyPlot.subplots()
-# ax.scatter(1:numpts,potentialdifference)
-# ax.scatter(1:numpts,exactpotentialdifference*ones(length(potentialdifference)))
+# ax.scatter(1:numpts, potentialdifference, s = 0.1)
+# ax.plot(
+#     1:numpts,
+#     exactpotentialdifference * ones(numpts),
+#     "--",
+# )
+# ax.set_ylim(exactpotentialdifference - Δylim, exactpotentialdifference + Δylim)
 # ax.grid()
 # fig

@@ -6,51 +6,6 @@ function hessian_matrix(poly, x)
     ]
 end
 
-# function seed_zero_levelset_with_interfacequads(interfacequads, mesh)
-#
-#     ncells = number_of_cells(mesh)
-#     cellsign = [cell_sign(mesh, cellid) for cellid = 1:ncells]
-#     cellids = findall(cellsign .== 0)
-#
-#     return seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
-# end
-
-# function seed_zero_levelset_with_interfacequads(interfacequads, mesh, cellids)
-#
-#     totalnumqps = sum([length(interfacequads[1, cellid]) for cellid in cellids])
-#     dim = dimension(mesh)
-#
-#     refseedpoints = zeros(2, dim, totalnumqps)
-#     # spatialseedpoints = zeros(2, dim, totalnumqps)
-#     seedcellids = zeros(Int, 2, totalnumqps)
-#
-#     start = 1
-#     for cellid in cellids
-#         cellsign = cell_sign(mesh, cellid)
-#
-#         if cellsign == 0
-#             numqps = length(interfacequads[1, cellid])
-#             stop = start + numqps - 1
-#             for s in [+1, -1]
-#                 cellmap = cell_map(mesh, s, cellid)
-#                 refpoints = points(interfacequads[s, cellid])
-#                 spatialpoints = cellmap(refpoints)
-#
-#                 row = cell_sign_to_row(s)
-#
-#                 refseedpoints[row, :, start:stop] = refpoints
-#                 # spatialseedpoints[row, :, start:stop] = spatialpoints
-#
-#                 seedcellid = solution_cell_id(mesh, s, cellid)
-#                 seedcellids[row, start:stop] = repeat([seedcellid], numqps)
-#             end
-#             start = stop + 1
-#         end
-#     end
-#     return refseedpoints, seedcellids
-#     # return refseedpoints, spatialseedpoints, seedcellids
-# end
-
 function project_on_zero_levelset(
     xguess,
     func,
@@ -205,64 +160,6 @@ function saye_newton_iterate(
     error("Did not converge in $maxiter iterations")
 end
 
-# function closest_reference_points_on_merged_mesh(
-#     querypoints,
-#     refseedpoints,
-#     spatialseedpoints,
-#     seedcellids,
-#     levelset,
-#     mesh,
-#     tol,
-#     boundingradius,
-# )
-#
-#     dim, numquerypoints = size(querypoints)
-#     refclosestpoints = zeros(2, dim, numquerypoints)
-#     refclosestcellids = zeros(Int, 2, numquerypoints)
-#
-#     tree = KDTree(spatialseedpoints)
-#     seedidx, seeddists = nn(tree, querypoints)
-#
-#     for (idx, sidx) in enumerate(seedidx)
-#         for cellsign in [+1, -1]
-#             row = cell_sign_to_row(cellsign)
-#
-#             xguess = refseedpoints[row, :, sidx]
-#             xquery = querypoints[:, idx]
-#             guesscellid = seedcellids[row, sidx]
-#
-#             cellmap = cell_map(mesh, cellsign, guesscellid)
-#             load_coefficients!(levelset, guesscellid)
-#             interpolatingpoly = interpolater(levelset)
-#
-#             try
-#                 refcp = saye_newton_iterate(
-#                     xguess,
-#                     xquery,
-#                     interpolatingpoly,
-#                     x -> vec(gradient(interpolatingpoly, x)),
-#                     x -> hessian_matrix(interpolatingpoly, x),
-#                     cellmap,
-#                     tol,
-#                     boundingradius,
-#                 )
-#
-#                 refclosestpoints[row, :, idx] = refcp
-#                 refclosestcellids[row, idx] = guesscellid
-#             catch e
-#                 println("Newton iteration failed to converge")
-#                 println("\tQuery point index = $idx")
-#                 println("\tSeed point index = $sidx")
-#                 println("\tCellid = $guesscellid")
-#
-#                 println("\tCell sign = $cellsign")
-#                 throw(e)
-#             end
-#         end
-#     end
-#     return refclosestpoints, refclosestcellids
-# end
-
 function closest_reference_points_on_levelset(
     querypoints,
     refseedpoints,
@@ -308,6 +205,8 @@ function closest_reference_points_on_levelset(
         catch e
             println("Newton iteration failed to converge")
             println("Check levelset function on cell $guesscellid")
+            println("Query point index = $idx")
+            println("Seed point index = $sidx")
             throw(e)
         end
     end
