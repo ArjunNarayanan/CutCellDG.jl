@@ -93,10 +93,6 @@ function mesh_widths(mesh::DGMesh)
     return mesh.meshwidths
 end
 
-function elements_per_mesh_side(mesh::DGMesh)
-    mesh.nelements
-end
-
 function background_mesh(mesh::DGMesh)
     return mesh.mesh
 end

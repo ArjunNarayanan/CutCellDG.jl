@@ -9,6 +9,19 @@ struct BoundaryPaddedMesh
     leftghostcoords::Any
 end
 
+function Base.show(io::IO, mesh::BoundaryPaddedMesh)
+    dim = dimension(mesh)
+    numghostlayers = number_of_ghost_layers(mesh)
+    gridsize = grid_size(mesh)
+    nfmside = nodes_per_mesh_side(mesh)
+
+    str =
+        "BoundaryPaddedMesh\n\tDimension : $dim\n\tGrid Size : $gridsize" *
+        "\n\tNodes per side : $nfmside" *
+        "\n\tNum. Ghost Layers : $numghostlayers"
+    print(io, str)
+end
+
 function BoundaryPaddedMesh(mesh, numghostlayers)
     x0 = reference_corner(mesh)
     nfmside = nodes_per_mesh_side(mesh)
@@ -55,6 +68,14 @@ function BoundaryPaddedMesh(mesh, numghostlayers)
         topghostcoords,
         leftghostcoords,
     )
+end
+
+function background_mesh(mesh::BoundaryPaddedMesh)
+    return mesh.mesh
+end
+
+function dimension(mesh::BoundaryPaddedMesh)
+    return dimension(background_mesh(mesh))
 end
 
 function nodes_per_mesh_side(paddedmesh::BoundaryPaddedMesh)
@@ -143,8 +164,8 @@ end
 function BoundaryPaddedLevelSet(
     paddedmesh::BoundaryPaddedMesh,
     refseedpoints,
-    spatialseedpoints,
     seedcellids,
+    spatialseedpoints,
     levelset,
     tol,
     boundingradius,

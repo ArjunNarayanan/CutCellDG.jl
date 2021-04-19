@@ -1,5 +1,8 @@
 module TransformationElasticitySolver
 using CutCellDG
+using LinearAlgebra
+include("analytical-solver.jl")
+PS = PlaneStrainSolver
 
 function bulk_modulus(l, m)
     return l + 2m / 3
@@ -129,6 +132,17 @@ function construct_mesh_and_quadratures(
     return mergedmesh, cellquads, facequads, interfacequads, levelset
 end
 
+function construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+
+    mergedmesh =
+        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
+
+    return mergedmesh, cellquads, facequads, interfacequads
+end
+
 function parent_potential(
     nodaldisplacement,
     basis,
@@ -208,10 +222,10 @@ function potential_difference_at_closest_points(
     theta0,
     V01,
     V02,
+    tol,
+    boundingradius,
 )
 
-    tol = 1e4eps()
-    boundingradius = 4.5
     refclosestpoints, refclosestcellids =
         CutCellDG.closest_reference_points_on_levelset(
             querypoints,
@@ -263,5 +277,165 @@ function potential_difference_at_closest_points(
 
     return productpotential - parentpotential
 end
+
+function average(v)
+    return sum(v) / length(v)
+end
+
+function time_step_size(levelsetspeed, dx; CFL = 0.5)
+    s = maximum(abs.(levelsetspeed))
+    return CFL * dx / s
+end
+
+function potential_difference_at_nodal_coordinates(
+    cutmesh,
+    basis,
+    levelset,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    stiffness,
+    theta0,
+    V01,
+    V02,
+    ΔG0,
+    numqp,
+    penalty,
+    analyticalsolution,
+    tol,
+    boundingradius,
+)
+
+    mesh, cellquads, facequads, interfacequads =
+        construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
+
+    nodaldisplacement = nodal_displacement(
+        mesh,
+        basis,
+        cellquads,
+        facequads,
+        interfacequads,
+        stiffness,
+        theta0,
+        analyticalsolution,
+        penalty,
+    )
+
+    querypoints =
+        CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
+    potentialdifference =
+        (
+            ΔG0 .+
+            1e9 * potential_difference_at_closest_points(
+                querypoints,
+                nodaldisplacement,
+                basis,
+                refseedpoints,
+                refseedcellids,
+                spatialseedpoints,
+                mesh,
+                levelset,
+                stiffness,
+                theta0,
+                V01,
+                V02,
+                tol,
+                boundingradius,
+            )
+        ) / abs(ΔG0)
+
+    return potentialdifference
+end
+
+function step_levelset(
+    levelset,
+    levelsetspeed,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    tol,
+    boundingradius,
+)
+
+    paddedmesh =
+        CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
+    paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
+        paddedmesh,
+        refseedpoints,
+        refseedcellids,
+        spatialseedpoints,
+        levelset,
+        tol,
+        boundingradius,
+    )
+
+    dx = minimum(CutCellDG.grid_size(paddedmesh))
+    dt = time_step_size(levelsetspeed, paddedmesh)
+
+    newcoeffs =
+        CutCellDG.step_first_order_levelset(paddedlevelset, levelsetspeed, dt)
+end
+
+function step_interface(
+    dgmesh,
+    basis,
+    levelset,
+    stiffness,
+    theta0,
+    ΔG0,
+    numqp,
+    interfacecenter,
+    outerradius;
+    tol = 1e4eps(),
+    boundingradius = 4.5,
+)
+    cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
+    refseedpoints, refseedcellids =
+        CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+    spatialseedpoints =
+        CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+
+    lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
+    lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
+
+    interfaceradius =
+        average(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
+    analyticalsolution = PS.CylindricalSolver(
+        interfaceradius,
+        outerradius,
+        interfacecenter,
+        lambda1,
+        mu1,
+        lambda2,
+        mu2,
+        theta0,
+    )
+
+    potentialdifference = potential_difference_at_nodal_coordinates(
+        cutmesh,
+        basis,
+        levelset,
+        stiffness,
+        theta0,
+        ΔG0,
+        numqp,
+        analyticalsolution,
+        tol,
+        boundingradius,
+    )
+
+    newcoeffs = step_levelset(
+        levelset,
+        potentialdifference,
+        refseedpoints,
+        refseedcellids,
+        spatialseedpoints,
+        tol,
+        boundingradius,
+    )
+
+    return newcoeffs
+end
+
 
 end

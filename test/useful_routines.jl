@@ -179,6 +179,10 @@ function cellwise_L2_error(
     return sqrt.(err)
 end
 
+function average(v)
+    return sum(v)/length(v)
+end
+
 function convergence_rate(dx, err)
     return diff(log.(err)) ./ diff(log.(dx))
 end

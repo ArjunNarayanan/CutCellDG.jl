@@ -4,3 +4,6 @@ Change closest point on merged mesh to first find closest points on
   background mesh and then use the mergemapper to map to merged mesh - done
 
 Change MergedMesh construction and quadrature mappings to two different steps
+
+
+Increase the penalty on the lagrange multiplier?

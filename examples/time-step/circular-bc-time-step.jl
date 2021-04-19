@@ -64,14 +64,25 @@ analyticalsolution = PS.CylindricalSolver(
     theta0,
 )
 
-mesh, cellquads, facequads, interfacequads, levelset =
-    TES.construct_mesh_and_quadratures(
-        meshwidth,
-        nelmts,
-        basis,
-        x -> -circle_distance_function(x, interfacecenter, interfaceradius),
-        numqp,
-    )
+# mesh, cellquads, facequads, interfacequads, levelset =
+#     TES.construct_mesh_and_quadratures(
+#         meshwidth,
+#         nelmts,
+#         basis,
+#         x -> -circle_distance_function(x, interfacecenter, interfaceradius),
+#         numqp,
+#     )
+
+cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+levelset = CutCellDG.LevelSet(
+    x -> -circle_distance_function(x, interfacecenter, interfaceradius),
+    cgmesh,
+    basis,
+)
+cutmesh = CutCellDG.CutMesh(dgmesh,levelset)
+mesh, cellquads, facequads, interfacequads =
+    TES.construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
 
 nodaldisplacement = TES.nodal_displacement(
     mesh,
@@ -108,27 +119,34 @@ potentialdifference =
             theta0,
             V01,
             V02,
+            1e-12,
+            4.5,
         )
     ) / abs(ΔG0)
 
 exactpotentialdifference =
-    (ΔG0 + 1e9*PS.interface_potential_difference(analyticalsolution,V01,V02))/abs(ΔG0)
+    (
+        ΔG0 +
+        1e9 * PS.interface_potential_difference(analyticalsolution, V01, V02)
+    ) / abs(ΔG0)
 
-err = maximum(abs.(potentialdifference .- exactpotentialdifference))/abs(exactpotentialdifference)
+err =
+    maximum(abs.(potentialdifference .- exactpotentialdifference)) /
+    abs(exactpotentialdifference)
 
-paddedmesh =
-    CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
-tol = 1e-3
-boundingradius = 10.0
-paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
-    paddedmesh,
-    refseedpoints,
-    spatialseedpoints,
-    refseedcellids,
-    levelset,
-    tol,
-    boundingradius,
-)
+# paddedmesh =
+#     CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
+# tol = 1e-3
+# boundingradius = 10.0
+# paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
+#     paddedmesh,
+#     refseedpoints,
+#     spatialseedpoints,
+#     refseedcellids,
+#     levelset,
+#     tol,
+#     boundingradius,
+# )
 
 # pderr =
 #     maximum(abs.(potentialdifference .- exactpotentialdifference)) /

@@ -72,8 +72,8 @@ spatialseedpoints =
 paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     paddedmesh,
     refseedpoints,
-    spatialseedpoints,
     seedcellids,
+    spatialseedpoints,
     levelset,
     tol,
     boundingradius,
@@ -125,8 +125,8 @@ spatialseedpoints =
 paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     paddedmesh,
     refseedpoints,
-    spatialseedpoints,
     seedcellids,
+    spatialseedpoints,
     levelset,
     tol,
     boundingradius,

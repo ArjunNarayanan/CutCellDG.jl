@@ -103,6 +103,44 @@ function seed_zero_levelset(
     return refseedpoints, seedcellids
 end
 
+function step_saye_newton_iterate(
+    x0,
+    l0,
+    xq,
+    func,
+    grad,
+    hess,
+    cellmap,
+    jac,
+    dim,
+    condtol,
+    steplimiter,
+)
+
+    vp = func(x0)
+    gp = grad(x0)
+    hp = hess(x0)
+
+    gf = vcat(((cellmap(x0) - xq) .* jac) + l0 * gp, vp)
+    hf = [
+        diagm(jac .^ 2)+l0*hp gp
+        gp' 0.0
+    ]
+
+    if inv(cond(hf)) > condtol
+        δ = hf \ gf
+        normδx = norm(δ[1:dim])
+        if normδx > steplimiter
+            δ *= steplimiter / normδx
+        end
+        x1 = x0 - δ[1:dim]
+        l1 = l0 - δ[end]
+        return x1, l1
+    else
+        error("Chopp method not implemented")
+    end
+end
+
 function saye_newton_iterate(
     xguess,
     xq,
@@ -111,9 +149,10 @@ function saye_newton_iterate(
     hess,
     cellmap,
     tol,
-    r;
+    boundingradius;
     maxiter = 20,
     condtol = 1e5eps(),
+    steplimiter = 2.0
 )
     dim = length(xguess)
     jac = jacobian(cellmap)
@@ -126,30 +165,23 @@ function saye_newton_iterate(
     l1 = l0
 
     for counter = 1:maxiter
-        vp = func(x0)
-        gp = grad(x0)
-        hp = hess(x0)
+        x1, l1 = step_saye_newton_iterate(
+            x0,
+            l0,
+            xq,
+            func,
+            grad,
+            hess,
+            cellmap,
+            jac,
+            dim,
+            condtol,
+            steplimiter,
+        )
 
-        gf = vcat(((cellmap(x0) - xq) .* jac) + l0 * gp, vp)
-        hf = [
-            diagm(jac .^ 2)+l0*hp gp
-            gp' 0.0
-        ]
-
-        if inv(cond(hf)) > condtol
-            δ = hf \ gf
-            normδx = norm(δ[1:dim])
-            if normδx > 0.5r
-                δ *= 0.5r / normδx
-            end
-            x1 = x0 - δ[1:dim]
-            l1 = l0 - δ[end]
-        else
-            error("Chopp method not implemented")
-        end
-
-        if norm(x1 - xguess) > r
-            error("Did not converge in ball of radius $r")
+        if norm(x1 - xguess) > boundingradius
+            @warn "Did not converge in ball of radius $boundingradius"
+            return x1
         elseif norm(x1 - x0) < tol
             return x1
         else
