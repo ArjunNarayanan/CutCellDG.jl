@@ -80,49 +80,30 @@ levelset = CutCellDG.LevelSet(
     cgmesh,
     basis,
 )
-cutmesh = CutCellDG.CutMesh(dgmesh,levelset)
-mesh, cellquads, facequads, interfacequads =
-    TES.construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
-
-nodaldisplacement = TES.nodal_displacement(
-    mesh,
-    basis,
-    cellquads,
-    facequads,
-    interfacequads,
-    stiffness,
-    theta0,
-    analyticalsolution,
-    penalty,
-)
-
-querypoints = CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
-cutmesh = CutCellDG.background_mesh(mesh)
+cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
 
-potentialdifference =
-    (
-        ΔG0 .+
-        1e9 * TES.potential_difference_at_closest_points(
-            querypoints,
-            nodaldisplacement,
-            basis,
-            refseedpoints,
-            refseedcellids,
-            spatialseedpoints,
-            mesh,
-            levelset,
-            stiffness,
-            theta0,
-            V01,
-            V02,
-            1e-12,
-            4.5,
-        )
-    ) / abs(ΔG0)
+potentialdifference = TES.potential_difference_at_nodal_coordinates(
+    cutmesh,
+    basis,
+    levelset,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    stiffness,
+    theta0,
+    V01,
+    V02,
+    ΔG0,
+    numqp,
+    penalty,
+    analyticalsolution,
+    1e-12,
+    4.5,
+)
 
 exactpotentialdifference =
     (
