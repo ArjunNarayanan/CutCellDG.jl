@@ -149,10 +149,10 @@ function saye_newton_iterate(
     hess,
     cellmap,
     tol,
-    boundingradius;
-    maxiter = 20,
+    boundingradius,
+    maxiter;
     condtol = 1e5eps(),
-    steplimiter = 2.0
+    steplimiter = 2.0,
 )
     dim = length(xguess)
     jac = jacobian(cellmap)
@@ -200,6 +200,7 @@ function closest_reference_points_on_levelset(
     levelset,
     tol,
     boundingradius,
+    maxiter,
 )
 
     dim, numquerypoints = size(querypoints)
@@ -229,6 +230,7 @@ function closest_reference_points_on_levelset(
                 cellmap,
                 tol,
                 boundingradius,
+                maxiter,
             )
 
             refclosestpoints[:, idx] = refcp
@@ -252,7 +254,8 @@ function distance_to_zero_levelset(
     seedcellids,
     levelset,
     tol,
-    boundingradius,
+    boundingradius;
+    maxiter = 50
 )
 
     dim, numquerypoints = size(querypoints)
@@ -268,6 +271,7 @@ function distance_to_zero_levelset(
             levelset,
             tol,
             boundingradius,
+            maxiter
         )
 
     for i = 1:numquerypoints

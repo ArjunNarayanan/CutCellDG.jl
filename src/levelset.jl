@@ -49,6 +49,10 @@ function update_coefficients!(levelset::LevelSet, cellid, coeffs)
     levelset.coefficients[nodeids] .= coeffs
 end
 
+function update_coefficients!(levelset::LevelSet,coeffs)
+    levelset.coefficients[:] .= coeffs
+end
+
 function (levelset::LevelSet)(x)
     levelset.interpolater(x)
 end

@@ -370,7 +370,7 @@ function step_levelset(
     )
 
     dx = minimum(CutCellDG.grid_size(paddedmesh))
-    dt = time_step_size(levelsetspeed, paddedmesh)
+    dt = time_step_size(levelsetspeed, dx)
 
     newcoeffs =
         CutCellDG.step_first_order_levelset(paddedlevelset, levelsetspeed, dt)
@@ -382,13 +382,17 @@ function step_interface(
     levelset,
     stiffness,
     theta0,
+    V01,
+    V02,
     ΔG0,
     numqp,
     interfacecenter,
     outerradius;
     tol = 1e4eps(),
     boundingradius = 4.5,
+    penaltyfactor = 1e3,
 )
+
     cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
     refseedpoints, refseedcellids =
         CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
@@ -397,6 +401,9 @@ function step_interface(
 
     lambda1, mu1 = CutCellDG.lame_coefficients(stiffness, +1)
     lambda2, mu2 = CutCellDG.lame_coefficients(stiffness, -1)
+
+    dx = minimum(CutCellDG.element_size(dgmesh))
+    penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
 
     interfaceradius =
         average(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
@@ -415,10 +422,16 @@ function step_interface(
         cutmesh,
         basis,
         levelset,
+        refseedpoints,
+        refseedcellids,
+        spatialseedpoints,
         stiffness,
         theta0,
+        V01,
+        V02,
         ΔG0,
         numqp,
+        penalty,
         analyticalsolution,
         tol,
         boundingradius,

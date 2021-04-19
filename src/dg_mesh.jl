@@ -10,7 +10,8 @@ struct DGMesh
     x0::Any
     meshwidths::Any
     nelements::Any
-    mesh
+    mesh::Any
+    elementsize::Any
 end
 
 function DGMesh(mesh, refcoords)
@@ -26,6 +27,7 @@ function DGMesh(mesh, refcoords)
     x0 = reference_corner(mesh)
     meshwidths = mesh_widths(mesh)
     nelements = elements_per_mesh_side(mesh)
+    elementsize = meshwidths ./ nelements
 
     DGMesh(
         dim,
@@ -39,7 +41,8 @@ function DGMesh(mesh, refcoords)
         x0,
         meshwidths,
         nelements,
-        mesh
+        mesh,
+        elementsize
     )
 end
 
@@ -63,6 +66,10 @@ function Base.show(io::IO, dgmesh::DGMesh)
         "Nodes/Element : $nodesperelement\n\t" *
         "Num. Nodes : $nnodes"
     print(io, str)
+end
+
+function element_size(dgmesh::DGMesh)
+    return dgmesh.elementsize
 end
 
 function elements_per_mesh_side(mesh::DGMesh)

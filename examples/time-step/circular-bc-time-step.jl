@@ -80,69 +80,218 @@ levelset = CutCellDG.LevelSet(
     cgmesh,
     basis,
 )
+
+
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+dx = minimum(CutCellDG.element_size(dgmesh))
+penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
 
-potentialdifference = TES.potential_difference_at_nodal_coordinates(
-    cutmesh,
+
+# analyticalsolution = PS.CylindricalSolver(
+#     interfaceradius,
+#     outerradius,
+#     interfacecenter,
+#     lambda1,
+#     mu1,
+#     lambda2,
+#     mu2,
+#     theta0,
+# )
+#
+# potentialdifference = TES.potential_difference_at_nodal_coordinates(
+#     cutmesh,
+#     basis,
+#     levelset,
+#     refseedpoints,
+#     refseedcellids,
+#     spatialseedpoints,
+#     stiffness,
+#     theta0,
+#     V01,
+#     V02,
+#     ΔG0,
+#     numqp,
+#     penalty,
+#     analyticalsolution,
+#     1e-12,
+#     4.5,
+# )
+#
+# newcoeffs = TES.step_levelset(
+#     levelset,
+#     potentialdifference,
+#     refseedpoints,
+#     refseedcellids,
+#     spatialseedpoints,
+#     1e-12,
+#     4.5,
+# )
+
+
+
+coeffs0 = CutCellDG.coefficients(levelset)
+coeffs1 = TES.step_interface(
+    dgmesh,
     basis,
     levelset,
-    refseedpoints,
-    refseedcellids,
-    spatialseedpoints,
     stiffness,
     theta0,
     V01,
     V02,
     ΔG0,
     numqp,
-    penalty,
-    analyticalsolution,
+    interfacecenter,
+    outerradius,
+)
+CutCellDG.update_coefficients!(levelset, coeffs1)
+cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
+refseedpoints, refseedcellids =
+    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+spatialseedpoints =
+    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+nodalcoordinates =
+    CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
+signeddistance = CutCellDG.distance_to_zero_levelset(
+    nodalcoordinates,
+    refseedpoints,
+    spatialseedpoints,
+    refseedcellids,
+    levelset,
+    0.1,
+    4.5,
+)
+
+
+
+
+querypoint = nodalcoordinates[:, 124]
+xguess = refseedpoints[:, 7]
+guesscellid = refseedcellids[7]
+cellmap = CutCellDG.cell_map(dgmesh, 7)
+CutCellDG.load_coefficients!(levelset, guesscellid)
+
+func = CutCellDG.interpolater(levelset)
+grad(x) = vec(gradient(func, x))
+hess(x) = CutCellDG.hessian_matrix(func, x)
+
+xc = CutCellDG.saye_newton_iterate(
+    xguess,
+    querypoint,
+    func,
+    grad,
+    hess,
+    cellmap,
     1e-12,
     4.5,
 )
 
-exactpotentialdifference =
-    (
-        ΔG0 +
-        1e9 * PS.interface_potential_difference(analyticalsolution, V01, V02)
-    ) / abs(ΔG0)
 
-err =
-    maximum(abs.(potentialdifference .- exactpotentialdifference)) /
-    abs(exactpotentialdifference)
+using NearestNeighbors
+tree = KDTree(spatialseedpoints)
+seedidx, seeddists = nn(tree, nodalcoordinates)
+idx = 124
+sidx = seedidx[idx]
+xguess = refseedpoints[:, sidx]
+xquery = nodalcoordinates[:, idx]
+guesscellid = refseedcellids[sidx]
 
-# paddedmesh =
-#     CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
-# tol = 1e-3
-# boundingradius = 10.0
-# paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
-#     paddedmesh,
-#     refseedpoints,
-#     spatialseedpoints,
-#     refseedcellids,
+cellmap = CutCellDG.cell_map(CutCellDG.background_mesh(levelset), guesscellid)
+cellmap = CutCellDG.cell_map(dgmesh, guesscellid)
+CutCellDG.load_coefficients!(levelset, guesscellid)
+func = CutCellDG.interpolater(levelset)
+grad(x) = vec(gradient(func, x))
+hess(x) = CutCellDG.hessian_matrix(func, x)
+
+jac = CutCellDG.jacobian(dgmesh)
+xq = xquery
+x0 = copy(xguess)
+gp = grad(x0)
+l0 = gp' * ((xq - cellmap(x0)) .* jac) / (gp' * gp)
+
+function run_saye_iterations(x0, xq, func, grad, hess, cellmap, jac, numiter)
+    xiter = zeros(2, numiter + 1)
+    xiter[:, 1] = x0
+    gp = grad(x0)
+    l0 = gp' * ((xq - cellmap(x0)) .* jac) / (gp' * gp)
+    for iter = 1:numiter
+        xnext, lnext = CutCellDG.step_saye_newton_iterate(
+            xiter[:, iter],
+            l0,
+            xq,
+            func,
+            grad,
+            hess,
+            cellmap,
+            jac,
+            2,
+            1e5eps(),
+            2.0,
+        )
+        xiter[:, iter+1] = xnext
+        l0 = lnext
+    end
+    return xiter
+end
+
+xiter = run_saye_iterations(x0, xq, func, grad, hess, cellmap, jac, 20)
+
+using Plots
+xrange = -1:1e-2:1
+Plots.contour(xrange, xrange, (x, y) -> levelset([x, y]), levels = [0.0])
+Plots.scatter!(xiter[1,:],xiter[2,:])
+
+refcp = CutCellDG.saye_newton_iterate(
+    xguess,
+    xquery,
+    func,
+    grad,
+    hess,
+    cellmap,
+    1e-12,
+    4.5,
+    maxiter=100
+)
+
+
+
+refclosestpoints, refclosestcellids, refgradients =
+    CutCellDG.closest_reference_points_on_levelset(
+        nodalcoordinates,
+        refseedpoints,
+        spatialseedpoints,
+        refseedcellids,
+        levelset,
+        1e-12,
+        4.5,
+        100
+    )
+
+
+
+
+# coeffs2 = TES.step_interface(
+#     dgmesh,
+#     basis,
 #     levelset,
-#     tol,
-#     boundingradius,
+#     stiffness,
+#     theta0,
+#     V01,
+#     V02,
+#     ΔG0,
+#     numqp,
+#     interfacecenter,
+#     outerradius,
 # )
-
-# pderr =
-#     maximum(abs.(potentialdifference .- exactpotentialdifference)) /
-#     abs(exactpotentialdifference)
-# println("Normalized error in potential difference = $pderr")
-
-# Δylim = 0.1 * abs(exactpotentialdifference)
+#
+# oldcoeffs = CutCellDG.coefficients(levelset)
+#
 # fig, ax = PyPlot.subplots()
-# numpts = length(potentialdifference)
-# ax.scatter(1:numpts, potentialdifference, s = 0.1)
-# ax.plot(
-#     1:numpts,
-#     exactpotentialdifference * ones(numpts),
-#     "--",
-# )
-# ax.set_ylim(exactpotentialdifference - Δylim, exactpotentialdifference + Δylim)
+# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], oldcoeffs, [0.0])
+# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], newcoeffs, [0.0])
+# ax.set_aspect("equal")
 # ax.grid()
 # fig

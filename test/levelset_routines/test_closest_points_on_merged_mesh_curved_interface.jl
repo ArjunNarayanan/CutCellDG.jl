@@ -36,6 +36,7 @@ querypoints = CutCellDG.nodal_coordinates(cgmesh)
 
 tol = 1e4eps()
 boundingradius = 4.5
+maxiter = 20
 refclosestpoints, refclosestcellids =
     CutCellDG.closest_reference_points_on_levelset(
         querypoints,
@@ -45,6 +46,7 @@ refclosestpoints, refclosestcellids =
         levelset,
         tol,
         boundingradius,
+        maxiter
     )
 
 parentclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
@@ -115,6 +117,7 @@ querypoints = CutCellDG.nodal_coordinates(cgmesh)
 
 tol = 1e4eps()
 boundingradius = 4.5
+maxiter = 20
 refclosestpoints, refclosestcellids =
     CutCellDG.closest_reference_points_on_levelset(
         querypoints,
@@ -124,6 +127,7 @@ refclosestpoints, refclosestcellids =
         levelset,
         tol,
         boundingradius,
+        maxiter
     )
 
 parentclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
