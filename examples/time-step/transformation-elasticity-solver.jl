@@ -224,6 +224,7 @@ function potential_difference_at_closest_points(
     V02,
     tol,
     boundingradius,
+    maxiter
 )
 
     refclosestpoints, refclosestcellids =
@@ -235,6 +236,7 @@ function potential_difference_at_closest_points(
             levelset,
             tol,
             boundingradius,
+            maxiter
         )
 
     normals =
@@ -282,7 +284,7 @@ function average(v)
     return sum(v) / length(v)
 end
 
-function time_step_size(levelsetspeed, dx; CFL = 0.5)
+function time_step_size(levelsetspeed, dx, CFL)
     s = maximum(abs.(levelsetspeed))
     return CFL * dx / s
 end
@@ -304,6 +306,7 @@ function potential_difference_at_nodal_coordinates(
     analyticalsolution,
     tol,
     boundingradius,
+    maxiter
 )
 
     mesh, cellquads, facequads, interfacequads =
@@ -341,6 +344,7 @@ function potential_difference_at_nodal_coordinates(
                 V02,
                 tol,
                 boundingradius,
+                maxiter
             )
         ) / abs(ΔG0)
 
@@ -355,6 +359,7 @@ function step_levelset(
     spatialseedpoints,
     tol,
     boundingradius,
+    CFL,
 )
 
     paddedmesh =
@@ -370,7 +375,7 @@ function step_levelset(
     )
 
     dx = minimum(CutCellDG.grid_size(paddedmesh))
-    dt = time_step_size(levelsetspeed, dx)
+    dt = time_step_size(levelsetspeed, dx, CFL)
 
     newcoeffs =
         CutCellDG.step_first_order_levelset(paddedlevelset, levelsetspeed, dt)
@@ -391,6 +396,8 @@ function step_interface(
     tol = 1e4eps(),
     boundingradius = 4.5,
     penaltyfactor = 1e3,
+    CFL = 0.5,
+    maxiter = 50
 )
 
     cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
@@ -435,6 +442,7 @@ function step_interface(
         analyticalsolution,
         tol,
         boundingradius,
+        maxiter
     )
 
     newcoeffs = step_levelset(
@@ -445,6 +453,7 @@ function step_interface(
         spatialseedpoints,
         tol,
         boundingradius,
+        CFL
     )
 
     return newcoeffs

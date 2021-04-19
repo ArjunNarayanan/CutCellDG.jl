@@ -1,4 +1,6 @@
 using PyPlot
+using LinearAlgebra
+using Statistics
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -16,6 +18,14 @@ end
 function angular_position(points)
     cpoints = points[1, :] + im * points[2, :]
     return rad2deg.(angle.(cpoints))
+end
+
+function potential_error(pd, exactpd)
+    return maximum(abs.(pd .- exactpd)) / abs(exactpd)
+end
+
+function exact_normalized_potential_difference(solver,V01,V02,ΔG0)
+    return (ΔG0 + 1e9PS.interface_potential_difference(solver,V01,V02))/abs(ΔG0)
 end
 
 polyorder = 3
@@ -46,32 +56,10 @@ transfstress =
 meshwidth = [width, width]
 numqp = required_quadrature_order(polyorder) + 2
 
-dx = width / nelmts
-penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
-
 basis = TensorProductBasis(2, polyorder)
 interfacecenter = [0.5, 0.5]
-interfaceradius = 0.3
-outerradius = 1.5
-analyticalsolution = PS.CylindricalSolver(
-    interfaceradius,
-    outerradius,
-    interfacecenter,
-    lambda1,
-    mu1,
-    lambda2,
-    mu2,
-    theta0,
-)
-
-# mesh, cellquads, facequads, interfacequads, levelset =
-#     TES.construct_mesh_and_quadratures(
-#         meshwidth,
-#         nelmts,
-#         basis,
-#         x -> -circle_distance_function(x, interfacecenter, interfaceradius),
-#         numqp,
-#     )
+interfaceradius = 0.4
+outerradius = 1.2
 
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
@@ -80,72 +68,74 @@ levelset = CutCellDG.LevelSet(
     cgmesh,
     basis,
 )
+nodalcoordinates = CutCellDG.nodal_coordinates(cgmesh)
+dx = minimum(CutCellDG.element_size(dgmesh))
+penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
+tol = 1e4eps()
+boundingradius = 4.5
+maxiter = 50
+CFL = 0.1
+angularposition = angular_position(nodalcoordinates .- interfacecenter)
+sortidx = sortperm(angularposition)
+angularposition = angularposition[sortidx]
 
 
+coeffs0 = CutCellDG.coefficients(levelset)
+CutCellDG.update_coefficients!(levelset, coeffs0)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
-dx = minimum(CutCellDG.element_size(dgmesh))
-penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
-
-
-# analyticalsolution = PS.CylindricalSolver(
-#     interfaceradius,
-#     outerradius,
-#     interfacecenter,
-#     lambda1,
-#     mu1,
-#     lambda2,
-#     mu2,
-#     theta0,
-# )
-#
-# potentialdifference = TES.potential_difference_at_nodal_coordinates(
-#     cutmesh,
-#     basis,
-#     levelset,
-#     refseedpoints,
-#     refseedcellids,
-#     spatialseedpoints,
-#     stiffness,
-#     theta0,
-#     V01,
-#     V02,
-#     ΔG0,
-#     numqp,
-#     penalty,
-#     analyticalsolution,
-#     1e-12,
-#     4.5,
-# )
-#
-# newcoeffs = TES.step_levelset(
-#     levelset,
-#     potentialdifference,
-#     refseedpoints,
-#     refseedcellids,
-#     spatialseedpoints,
-#     1e-12,
-#     4.5,
-# )
-
-
-
-coeffs0 = CutCellDG.coefficients(levelset)
-coeffs1 = TES.step_interface(
-    dgmesh,
+spatialseedradius =
+    vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
+R0 = TES.average(spatialseedradius)
+devR0 = std(spatialseedradius)
+analyticalsolution = PS.CylindricalSolver(
+    R0,
+    outerradius,
+    interfacecenter,
+    lambda1,
+    mu1,
+    lambda2,
+    mu2,
+    theta0,
+)
+pd0 = TES.potential_difference_at_nodal_coordinates(
+    cutmesh,
     basis,
     levelset,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
     stiffness,
     theta0,
     V01,
     V02,
     ΔG0,
     numqp,
-    interfacecenter,
-    outerradius,
+    penalty,
+    analyticalsolution,
+    tol,
+    boundingradius,
+    maxiter,
+)
+pd0 = pd0[sortidx]
+exactpd0 = exact_normalized_potential_difference(analyticalsolution,V01,V02,ΔG0)
+errpd0 = potential_error(pd0, exactpd0)
+
+
+
+
+coeffs1 = TES.step_levelset(
+    levelset,
+    pd0,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    tol,
+    boundingradius,
+    CFL,
 )
 CutCellDG.update_coefficients!(levelset, coeffs1)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
@@ -153,126 +143,152 @@ refseedpoints, refseedcellids =
     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
-nodalcoordinates =
-    CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
-signeddistance = CutCellDG.distance_to_zero_levelset(
-    nodalcoordinates,
-    refseedpoints,
-    spatialseedpoints,
-    refseedcellids,
+spatialseedradius =
+    vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
+R1 = TES.average(spatialseedradius)
+devR1 = std(spatialseedradius)
+analyticalsolution = PS.CylindricalSolver(
+    R1,
+    outerradius,
+    interfacecenter,
+    lambda1,
+    mu1,
+    lambda2,
+    mu2,
+    theta0,
+)
+pd1 = TES.potential_difference_at_nodal_coordinates(
+    cutmesh,
+    basis,
     levelset,
-    0.1,
-    4.5,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    stiffness,
+    theta0,
+    V01,
+    V02,
+    ΔG0,
+    numqp,
+    penalty,
+    analyticalsolution,
+    tol,
+    boundingradius,
+    maxiter,
+)
+pd1 = pd1[sortidx]
+exactpd1 = exact_normalized_potential_difference(analyticalsolution,V01,V02,ΔG0)
+errpd1 = potential_error(pd1,exactpd1)
+
+
+
+coeffs2 = TES.step_levelset(
+    levelset,
+    pd1,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    tol,
+    boundingradius,
+    CFL,
+)
+CutCellDG.update_coefficients!(levelset, coeffs2)
+cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
+refseedpoints, refseedcellids =
+    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+spatialseedpoints =
+    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+spatialseedradius =
+    vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
+R2 = TES.average(spatialseedradius)
+devR2 = std(spatialseedradius)
+analyticalsolution = PS.CylindricalSolver(
+    R2,
+    outerradius,
+    interfacecenter,
+    lambda1,
+    mu1,
+    lambda2,
+    mu2,
+    theta0,
+)
+pd2 = TES.potential_difference_at_nodal_coordinates(
+    cutmesh,
+    basis,
+    levelset,
+    refseedpoints,
+    refseedcellids,
+    spatialseedpoints,
+    stiffness,
+    theta0,
+    V01,
+    V02,
+    ΔG0,
+    numqp,
+    penalty,
+    analyticalsolution,
+    tol,
+    boundingradius,
+    maxiter,
 )
 
 
 
 
-querypoint = nodalcoordinates[:, 124]
-xguess = refseedpoints[:, 7]
-guesscellid = refseedcellids[7]
-cellmap = CutCellDG.cell_map(dgmesh, 7)
-CutCellDG.load_coefficients!(levelset, guesscellid)
-
-func = CutCellDG.interpolater(levelset)
-grad(x) = vec(gradient(func, x))
-hess(x) = CutCellDG.hessian_matrix(func, x)
-
-xc = CutCellDG.saye_newton_iterate(
-    xguess,
-    querypoint,
-    func,
-    grad,
-    hess,
-    cellmap,
-    1e-12,
-    4.5,
-)
-
-
-using NearestNeighbors
-tree = KDTree(spatialseedpoints)
-seedidx, seeddists = nn(tree, nodalcoordinates)
-idx = 124
-sidx = seedidx[idx]
-xguess = refseedpoints[:, sidx]
-xquery = nodalcoordinates[:, idx]
-guesscellid = refseedcellids[sidx]
-
-cellmap = CutCellDG.cell_map(CutCellDG.background_mesh(levelset), guesscellid)
-cellmap = CutCellDG.cell_map(dgmesh, guesscellid)
-CutCellDG.load_coefficients!(levelset, guesscellid)
-func = CutCellDG.interpolater(levelset)
-grad(x) = vec(gradient(func, x))
-hess(x) = CutCellDG.hessian_matrix(func, x)
-
-jac = CutCellDG.jacobian(dgmesh)
-xq = xquery
-x0 = copy(xguess)
-gp = grad(x0)
-l0 = gp' * ((xq - cellmap(x0)) .* jac) / (gp' * gp)
-
-function run_saye_iterations(x0, xq, func, grad, hess, cellmap, jac, numiter)
-    xiter = zeros(2, numiter + 1)
-    xiter[:, 1] = x0
-    gp = grad(x0)
-    l0 = gp' * ((xq - cellmap(x0)) .* jac) / (gp' * gp)
-    for iter = 1:numiter
-        xnext, lnext = CutCellDG.step_saye_newton_iterate(
-            xiter[:, iter],
-            l0,
-            xq,
-            func,
-            grad,
-            hess,
-            cellmap,
-            jac,
-            2,
-            1e5eps(),
-            2.0,
-        )
-        xiter[:, iter+1] = xnext
-        l0 = lnext
-    end
-    return xiter
-end
-
-xiter = run_saye_iterations(x0, xq, func, grad, hess, cellmap, jac, 20)
-
-using Plots
-xrange = -1:1e-2:1
-Plots.contour(xrange, xrange, (x, y) -> levelset([x, y]), levels = [0.0])
-Plots.scatter!(xiter[1,:],xiter[2,:])
-
-refcp = CutCellDG.saye_newton_iterate(
-    xguess,
-    xquery,
-    func,
-    grad,
-    hess,
-    cellmap,
-    1e-12,
-    4.5,
-    maxiter=100
-)
-
-
-
-refclosestpoints, refclosestcellids, refgradients =
-    CutCellDG.closest_reference_points_on_levelset(
-        nodalcoordinates,
-        refseedpoints,
-        spatialseedpoints,
-        refseedcellids,
-        levelset,
-        1e-12,
-        4.5,
-        100
-    )
 
 
 
 
+
+
+Δylim = 0.1
+fig, ax = PyPlot.subplots()
+ax.plot(angularposition, pd0/exactpd0)
+ax.plot(angularposition, pd1/exactpd1)
+ax.set_ylim(1.0-Δylim,1.0+ Δylim)
+ax.grid()
+fig
+
+
+
+# coeffs1 = TES.step_interface(
+#     dgmesh,
+#     basis,
+#     levelset,
+#     stiffness,
+#     theta0,
+#     V01,
+#     V02,
+#     ΔG0,
+#     numqp,
+#     interfacecenter,
+#     outerradius,
+#     CFL = 0.5,
+# )
+#
+#
+# CutCellDG.update_coefficients!(levelset, coeffs1)
+# cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
+# refseedpoints, refseedcellids =
+#     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+# spatialseedpoints =
+#     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+# nodalcoordinates =
+#     CutCellDG.nodal_coordinates(CutCellDG.background_mesh(levelset))
+# signeddistance = CutCellDG.distance_to_zero_levelset(
+#     nodalcoordinates,
+#     refseedpoints,
+#     spatialseedpoints,
+#     refseedcellids,
+#     levelset,
+#     0.1,
+#     4.5,
+# )
+# CutCellDG.update_coefficients!(levelset, signeddistance)
+#
+#
+#
+#
 # coeffs2 = TES.step_interface(
 #     dgmesh,
 #     basis,
@@ -285,13 +301,14 @@ refclosestpoints, refclosestcellids, refgradients =
 #     numqp,
 #     interfacecenter,
 #     outerradius,
+#     CFL = 0.1,
 # )
 #
-# oldcoeffs = CutCellDG.coefficients(levelset)
 #
 # fig, ax = PyPlot.subplots()
-# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], oldcoeffs, [0.0])
-# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], newcoeffs, [0.0])
+# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], coeffs0, [0.0])
+# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], coeffs1, [0.0])
+# ax.tricontour(nodalcoordinates[1, :], nodalcoordinates[2, :], coeffs2, [0.0])
 # ax.set_aspect("equal")
 # ax.grid()
 # fig
