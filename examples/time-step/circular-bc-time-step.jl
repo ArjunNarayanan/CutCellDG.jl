@@ -50,8 +50,8 @@ dx = width / nelmts
 penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
 
 basis = TensorProductBasis(2, polyorder)
-interfacecenter = [0.0, 0.0]
-interfaceradius = 0.5
+interfacecenter = [0.5, 0.5]
+interfaceradius = 0.3
 outerradius = 1.5
 analyticalsolution = PS.CylindricalSolver(
     interfaceradius,
@@ -111,6 +111,11 @@ potentialdifference =
         )
     ) / abs(ΔG0)
 
+exactpotentialdifference =
+    (ΔG0 + 1e9*PS.interface_potential_difference(analyticalsolution,V01,V02))/abs(ΔG0)
+
+err = maximum(abs.(potentialdifference .- exactpotentialdifference))/abs(exactpotentialdifference)
+
 paddedmesh =
     CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
 tol = 1e-3
@@ -124,38 +129,6 @@ paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
     tol,
     boundingradius,
 )
-
-bgmesh = CutCellDG.background_mesh(levelset)
-bgcoords = CutCellDG.bottom_ghost_coordinates(paddedmesh)
-xq = bgcoords[:, 2]
-
-using NearestNeighbors
-tree = KDTree(spatialseedpoints)
-seedidx, seeddists = nn(tree, xq)
-guesscellid = refseedcellids[seedidx]
-xg = refseedpoints[:, seedidx]
-cellmap = CutCellDG.cell_map(bgmesh, guesscellid)
-CutCellDG.load_coefficients!(levelset, guesscellid)
-poly = CutCellDG.interpolater(levelset)
-
-refcp = CutCellDG.saye_newton_iterate(
-    xg,
-    xq,
-    poly,
-    x -> vec(gradient(poly, x)),
-    x -> CutCellDG.hessian_matrix(poly, x),
-    cellmap,
-    1e-5,
-    7.0,
-)
-
-using Plots
-xrange = -1.5:1e-2:1.5
-Plots.contour(xrange, xrange, (x, y) -> levelset([x, y]), levels = [0.0])
-Plots.scatter!([xg[1]], [xg[2]])
-
-# exactpotentialdifference =
-#     (ΔG0 + 1e9*PS.interface_potential_difference(analyticalsolution,V01,V02))/abs(ΔG0)
 
 # pderr =
 #     maximum(abs.(potentialdifference .- exactpotentialdifference)) /

@@ -222,7 +222,7 @@ function potential_difference_at_closest_points(
             tol,
             boundingradius,
         )
-    
+
     normals =
         CutCellDG.collect_normals(refclosestpoints, refclosestcellids, levelset)
 
