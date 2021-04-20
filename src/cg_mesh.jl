@@ -12,6 +12,7 @@ struct CGMesh
     nelements::Any
     nfmside::Any
     mesh::Any
+    elementsize
 end
 
 function CGMesh(mesh, nodesperelement)
@@ -24,6 +25,7 @@ function CGMesh(mesh, nodesperelement)
     nfeside = nodes_per_element_side(nodesperelement)
     nfmside = nodes_per_mesh_side(nelements, nfeside)
     numnodes = prod(nfmside)
+    elementsize = meshwidths ./ nelements
 
     nodalcoordinates =
         cg_nodal_coordinates(x0, mesh_widths(mesh), nelements, nfmside)
@@ -45,6 +47,7 @@ function CGMesh(mesh, nodesperelement)
         nelements,
         nfmside,
         mesh,
+        elementsize
     )
 end
 
@@ -75,6 +78,10 @@ function Base.show(io::IO, mesh::CGMesh)
         "Nodes/Element : $nodesperelement\n\t" *
         "Num. Nodes : $nnodes"
     print(io, str)
+end
+
+function element_size(mesh::CGMesh)
+    return mesh.elementsize
 end
 
 function dimension(mesh::CGMesh)

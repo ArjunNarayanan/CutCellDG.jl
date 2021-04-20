@@ -182,14 +182,15 @@ function saye_newton_iterate(
         if norm(x1 - xguess) > boundingradius
             @warn "Did not converge in ball of radius $boundingradius"
             return x1
-        elseif norm(x1 - x0) < tol
+        elseif norm(cellmap(x1) - cellmap(x0)) < tol
             return x1
         else
             x0 = x1
             l0 = l1
         end
     end
-    error("Did not converge in $maxiter iterations")
+    @warn "Did not converge in $maxiter iterations"
+    return x1
 end
 
 function closest_reference_points_on_levelset(
@@ -255,7 +256,7 @@ function distance_to_zero_levelset(
     levelset,
     tol,
     boundingradius;
-    maxiter = 50
+    maxiter = 20
 )
 
     dim, numquerypoints = size(querypoints)
