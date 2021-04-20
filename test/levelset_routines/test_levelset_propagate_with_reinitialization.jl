@@ -1,5 +1,6 @@
-using Plots
-using LinearAlgebra
+using Test
+# using Plots
+# using LinearAlgebra
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
@@ -124,7 +125,7 @@ function error_for_nelmts(nelmts)
     paddedmesh = CutCellDG.BoundaryPaddedMesh(mesh, 1)
     numnodes = CutCellDG.number_of_nodes(mesh)
     dx = minimum(CutCellDG.grid_size(paddedmesh))
-    tol = 1e4eps()
+    tol = dx^polyorder
     boundingradius = 5.0
 
     levelset = CutCellDG.LevelSet(
@@ -135,7 +136,6 @@ function error_for_nelmts(nelmts)
     levelsetspeed = speed * ones(numnodes)
     dt = time_step_size(levelsetspeed, dx)
     numiter = round(Int, stoptime / dt)
-    stoptime = numiter * dt
     itercoeffs = run_time_steps(levelset, levelsetspeed, numiter)
 
     finalradius = radius - stoptime
@@ -145,106 +145,24 @@ function error_for_nelmts(nelmts)
         basis,
         quad,
         mesh,
-    )
+    )[1]
+    normalizer = integral_norm_on_uniform_mesh(
+            x -> -circle_distance_function(x, xc, finalradius)[1],
+            quad,
+            mesh,
+            1,
+        )[1]
+    normalizederr = err/normalizer
 
-    return err
+
+    return normalizederr
 end
 
 
-nelmts = 16
-x0 = [0.0, 0.0]
-L, W = 1.0, 1.0
-polyorder = 2
-numqp = required_quadrature_order(polyorder)
+powers = 2:5
+nelmts = 2 .^powers
+err = error_for_nelmts.(nelmts)
+dx = 1.0 ./ nelmts
+rate = convergence_rate(dx,err)
 
-xc = [0.5, 0.5]
-radius = 0.45
-speed = -1.0
-stoptime = 0.25
-
-basis = TensorProductBasis(2, polyorder)
-quad = tensor_product_quadrature(2, numqp)
-mesh = CutCellDG.CGMesh(x0, [L, W], [nelmts, nelmts], basis)
-nodalcoordinates = CutCellDG.nodal_coordinates(mesh)
-paddedmesh = CutCellDG.BoundaryPaddedMesh(mesh, 1)
-numnodes = CutCellDG.number_of_nodes(mesh)
-dx = minimum(CutCellDG.grid_size(paddedmesh))
-tol = dx^polyorder
-boundingradius = 5.0
-
-levelset = CutCellDG.LevelSet(
-    x -> -circle_distance_function(x, xc, radius),
-    mesh,
-    basis,
-)
-levelsetspeed = speed * ones(numnodes)
-dt = time_step_size(levelsetspeed, dx)
-numiter = round(Int, stoptime / dt)
-stoptime = numiter * dt
-itercoeffs = run_time_steps(levelset, levelsetspeed, numiter)
-
-finalradius = radius - stoptime
-err =
-    uniform_mesh_L2_error(
-        itercoeffs[:, numiter+1]',
-        x -> -circle_distance_function(x, xc, finalradius)[1],
-        basis,
-        quad,
-        mesh,
-    )[1]
-normalizer = integral_norm_on_uniform_mesh(
-        x -> -circle_distance_function(x, xc, finalradius)[1],
-        quad,
-        mesh,
-        1,
-    )[1]
-normalizederr = err/normalizer
-println("Error = $normalizederr")
-
-
-
-
-
-
-
-
-
-
-
-
-
-# err = error_for_nelmts(nelmts)
-# CutCellDG.update_coefficients!(levelset, itercoeffs[:, numiter+1])
-# cutmesh = CutCellDG.CutMesh(mesh, levelset)
-# refseedpoints, refseedcellids =
-#     CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
-# spatialseedpoints =
-#     CutCellDG.map_to_spatial(refseedpoints, refseedcellids, mesh)
-# Rn = average(mapslices(norm, spatialseedpoints .- xc, dims = 1))
-#
-# finalradius = radius - stoptime
-# err = uniform_mesh_L2_error(
-#     itercoeffs[:, numiter+1]',
-#     x -> -circle_distance_function(x, xc, finalradius)[1],
-#     basis,
-#     quad,
-#     mesh,
-# )
-#
-#
-#
-# x, y = grid_range(mesh)
-# anim = @animate for i = 1:numiter+1
-#     Z = reshape(itercoeffs[:, i], length(y), :)
-#     fig = plot(legend = false, aspect_ratio = :equal)
-#     plot!(
-#         fig,
-#         rectangle(L, W, x0[1], x0[2]),
-#         opacity = 0.2,
-#         linewidth = 2,
-#         fillcolor = "blue",
-#     )
-#     contour!(fig, x, y, Z, levels = [0.0], color = "red", linewidth = 2)
-# end
-#
-# gif(anim, fps = 10)
+@test all(rate .> 0.9)

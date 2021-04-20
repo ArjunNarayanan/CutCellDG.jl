@@ -180,7 +180,7 @@ function saye_newton_iterate(
         )
 
         if norm(x1 - xguess) > boundingradius
-            @warn "Did not converge in ball of radius $boundingradius"
+            # @warn "Did not converge in ball of radius $boundingradius"
             return x1
         elseif norm(cellmap(x1) - cellmap(x0)) < tol
             return x1
@@ -189,7 +189,7 @@ function saye_newton_iterate(
             l0 = l1
         end
     end
-    @warn "Did not converge in $maxiter iterations"
+    # @warn "Did not converge in $maxiter iterations"
     return x1
 end
 
