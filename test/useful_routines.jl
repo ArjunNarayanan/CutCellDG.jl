@@ -39,10 +39,11 @@ function circle_distance_function(coords, center, radius)
 end
 
 function closest_point_on_arc(querypoints,center,radius)
-    cqpoints = querypoints[1,:] + im*querypoints[2,:]
+    relpos = querypoints .- center
+    cqpoints = relpos[1,:] + im*relpos[2,:]
     theta = angle.(cqpoints)
     v = vcat(cos.(theta)',sin.(theta)')
-    return radius*v
+    return center .+ radius*v
 end
 
 function corner_distance_function(x::V, xc) where {V<:AbstractVector}

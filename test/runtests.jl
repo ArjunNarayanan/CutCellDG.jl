@@ -115,14 +115,17 @@ end
 end
 
 @safetestset "Test Levelset Reinitialize" begin
+    include("levelset_routines/test_seed_zero_levelset.jl")
+    include("levelset_routines/test_plane_interface_closest_points.jl")
+    include("levelset_routines/test_circular_interface_closest_points.jl")
     include("levelset_routines/test_levelset_reinitialize.jl")
 end
 
-@safetestset "Test Closest Point Algorithm on MergedMesh" begin
-    include("levelset_routines/test_closest_points_on_merged_mesh.jl")
-    include("levelset_routines/test_closest_points_on_merged_mesh_curved_interface.jl")
-end
-
-@safetestset "Test Levelset Propagate" begin
-    include("levelset_routines/test_levelset_propagate.jl")
-end
+# @safetestset "Test Closest Point Algorithm on MergedMesh" begin
+#     include("levelset_routines/test_closest_points_on_merged_mesh.jl")
+#     include("levelset_routines/test_closest_points_on_merged_mesh_curved_interface.jl")
+# end
+#
+# @safetestset "Test Levelset Propagate" begin
+#     include("levelset_routines/test_levelset_propagate.jl")
+# end
