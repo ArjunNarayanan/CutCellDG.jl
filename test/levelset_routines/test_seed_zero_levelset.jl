@@ -44,7 +44,7 @@ refseedpoints, refseedcellids =
 testseedpoints = [0.   0.  0.   0.  0.   0.  0.   0.
                   -1/3 1/3 -1/3 1/3 -1/3 1/3 -1/3 1/3]
 testseedcellids = [3,3,3,3,4,4,4,4]
-@test allapprox(testseedpoints,refseedpoints)
+@test allapprox(testseedpoints,refseedpoints,1e3eps())
 @test allequal(refseedcellids, testseedcellids)
 
 

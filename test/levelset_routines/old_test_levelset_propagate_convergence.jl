@@ -3,7 +3,7 @@ using Test
 # using LinearAlgebra
 using PolynomialBasis
 using ImplicitDomainQuadrature
-# using Revise
+using Revise
 using CutCellDG
 include("../../test/useful_routines.jl")
 
@@ -22,6 +22,8 @@ function step_interface(
 )
     mesh = CutCellDG.background_mesh(levelset)
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
+
+
     refseedpoints, refseedcellids =
         CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
     spatialseedpoints =
@@ -29,9 +31,8 @@ function step_interface(
 
     paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
         paddedmesh,
-        refseedpoints,
-        refseedcellids,
         spatialseedpoints,
+        refseedcellids,
         levelset,
         tol,
         boundingradius,
@@ -46,9 +47,9 @@ end
 
 function signed_distance_coefficients(
     levelset,
-    mesh;
-    tol = 1e4eps(),
-    boundingradius = 5.0,
+    mesh,
+    tol,
+    boundingradius
 )
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
     refseedpoints, refseedcellids =
@@ -59,7 +60,6 @@ function signed_distance_coefficients(
 
     signeddistance = CutCellDG.distance_to_zero_levelset(
         nodalcoordinates,
-        refseedpoints,
         spatialseedpoints,
         refseedcellids,
         levelset,
@@ -70,9 +70,8 @@ function signed_distance_coefficients(
     return signeddistance
 end
 
-function run_time_steps(levelset, levelsetspeed, numiter)
+function run_time_steps(levelset, levelsetspeed, paddedmesh, dt, numiter)
     mesh = CutCellDG.background_mesh(levelset)
-    paddedmesh = CutCellDG.BoundaryPaddedMesh(mesh, 1)
     dx = minimum(CutCellDG.grid_size(paddedmesh))
     dt = time_step_size(levelsetspeed, dx)
     numnodes = CutCellDG.number_of_nodes(mesh)
@@ -125,8 +124,6 @@ function error_for_nelmts(nelmts)
     paddedmesh = CutCellDG.BoundaryPaddedMesh(mesh, 1)
     numnodes = CutCellDG.number_of_nodes(mesh)
     dx = minimum(CutCellDG.grid_size(paddedmesh))
-    tol = dx^polyorder
-    boundingradius = 5.0
 
     levelset = CutCellDG.LevelSet(
         x -> -circle_distance_function(x, xc, radius),
@@ -135,6 +132,7 @@ function error_for_nelmts(nelmts)
     )
     levelsetspeed = speed * ones(numnodes)
     dt = time_step_size(levelsetspeed, dx)
+    @assert isinteger(stoptime/dt)
     numiter = round(Int, stoptime / dt)
     itercoeffs = run_time_steps(levelset, levelsetspeed, numiter)
 
@@ -159,7 +157,7 @@ function error_for_nelmts(nelmts)
 end
 
 
-powers = 2:5
+powers = 2:6
 nelmts = 2 .^powers
 err = error_for_nelmts.(nelmts)
 dx = 1.0 ./ nelmts

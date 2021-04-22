@@ -26,8 +26,9 @@ function Base.show(io::IO,cutmesh::CutMesh)
     print(io,str)
 end
 
-function CutMesh(mesh, levelset; tol = 1e-4, perturbation = 1e-3)
-    cellsign = cell_sign!(levelset, tol, perturbation)
+function CutMesh(mesh, levelset; tol = 1e-4, perturbation = 1e-2)
+    dx = minimum(element_size(mesh))
+    cellsign = cell_sign!(levelset, tol, perturbation*dx)
 
     posactivenodeids = active_node_ids(mesh, +1, cellsign)
     negactivenodeids = active_node_ids(mesh, -1, cellsign)
@@ -109,7 +110,7 @@ function cell_sign!(levelset, tol, perturbation)
         if (s == +1 || s == 0 || s == -1)
             cellsign[cellid] = s
         else
-            @warn "Perturbing levelset function by perturbation = $perturbation"
+            # @warn "Perturbing levelset function by perturbation = $perturbation"
             newcoeffs = coefficients(levelset, cellid) .+ perturbation
             update_coefficients!(levelset, cellid, newcoeffs)
             load_coefficients!(levelset, cellid)

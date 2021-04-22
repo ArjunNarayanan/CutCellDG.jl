@@ -10,7 +10,7 @@ struct LevelSet
 end
 
 function Base.show(io::IO, levelset::LevelSet)
-    p = order(interpolater(levelset))
+    p = order(levelset)
     numcoefficients = length(coefficients(levelset))
     dim = dimension(background_mesh(levelset))
     str =
@@ -21,6 +21,10 @@ end
 
 function order(poly::InterpolatingPolynomial)
     return PolynomialBasis.order(poly.basis)
+end
+
+function order(levelset::LevelSet)
+    return order(interpolater(levelset))
 end
 
 function coefficients(levelset::LevelSet)

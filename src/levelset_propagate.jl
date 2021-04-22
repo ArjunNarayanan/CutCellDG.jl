@@ -163,9 +163,8 @@ end
 
 function BoundaryPaddedLevelSet(
     paddedmesh::BoundaryPaddedMesh,
-    refseedpoints,
-    seedcellids,
     spatialseedpoints,
+    seedcellids,
     levelset,
     tol,
     boundingradius,
@@ -173,7 +172,6 @@ function BoundaryPaddedLevelSet(
 
     bottomghostdist = distance_to_zero_levelset(
         bottom_ghost_coordinates(paddedmesh),
-        refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
@@ -182,7 +180,6 @@ function BoundaryPaddedLevelSet(
     )
     rightghostdist = distance_to_zero_levelset(
         right_ghost_coordinates(paddedmesh),
-        refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
@@ -191,7 +188,6 @@ function BoundaryPaddedLevelSet(
     )
     topghostdist = distance_to_zero_levelset(
         top_ghost_coordinates(paddedmesh),
-        refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,
@@ -200,7 +196,6 @@ function BoundaryPaddedLevelSet(
     )
     leftghostdist = distance_to_zero_levelset(
         left_ghost_coordinates(paddedmesh),
-        refseedpoints,
         spatialseedpoints,
         seedcellids,
         levelset,

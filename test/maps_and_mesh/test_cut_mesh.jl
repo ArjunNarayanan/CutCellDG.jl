@@ -8,7 +8,6 @@ polyorder = 1
 numqp = 2
 
 basis = TensorProductBasis(2, polyorder)
-# levelset = InterpolatingPolynomial(1, basis)
 x0 = [0.,0.]
 widths = [3.,1.]
 nelements = [3,1]
