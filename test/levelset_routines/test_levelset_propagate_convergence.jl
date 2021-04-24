@@ -1,7 +1,7 @@
 using Test
 using PolynomialBasis
 using ImplicitDomainQuadrature
-using Revise
+# using Revise
 using CutCellDG
 include("../../test/useful_routines.jl")
 

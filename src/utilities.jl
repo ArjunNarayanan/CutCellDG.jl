@@ -190,48 +190,27 @@ function map_to_spatial(refpoints, refcellids, mesh)
     return spatialpoints
 end
 
-function map_to_spatial_on_merged_mesh(
-    refpoints,
-    refcellids,
+function map_to_reference(spatialpoints, cellids, mesh)
+    referencepoints = similar(spatialpoints)
+    for (idx, cellid) in enumerate(cellids)
+        cellmap = cell_map(mesh, cellid)
+        referencepoints[:, idx] = inverse(cellmap, spatialpoints[:, idx])
+    end
+    return referencepoints
+end
+
+function map_to_reference_on_merged_mesh(
+    spatialpoints,
+    cellids,
     levelsetsign,
     mesh,
 )
-
-    dim, numpts = size(refpoints)
-    @assert length(refcellids) == numpts
-    spatialpoints = zeros(dim, numpts)
-
-    for idx = 1:numpts
-        cellid = refcellids[idx]
+    referencepoints = similar(spatialpoints)
+    for (idx, cellid) in enumerate(cellids)
         cellmap = cell_map(mesh, levelsetsign, cellid)
-        spatialpoints[:, idx] = cellmap(refpoints[:, idx])
+        referencepoints[:, idx] = inverse(cellmap, spatialpoints[:, idx])
     end
-    return spatialpoints
-end
-
-function map_reference_points_to_merged_mesh(
-    refpoints,
-    refcellids,
-    levelsetsign,
-    mergedmesh,
-)
-
-    dim, numpts = size(refpoints)
-    @assert length(refcellids) == numpts
-    mappedrefpoints = copy(refpoints)
-    mergemapper = merge_mapper(mergedmesh)
-
-    for (idx, cellid) in enumerate(refcellids)
-        mergecellid = solution_cell_id(mergedmesh, levelsetsign, cellid)
-        if mergecellid != cellid
-            mergedirection = merge_direction(mergedmesh, levelsetsign, cellid)
-            @assert mergedirection != 0
-
-            mappedrefpoints[:, idx] =
-                mergemapper[mergedirection](refpoints[:, idx])
-        end
-    end
-    return mappedrefpoints
+    return referencepoints
 end
 
 function collect_normals(refpoints, refcellids, levelset)

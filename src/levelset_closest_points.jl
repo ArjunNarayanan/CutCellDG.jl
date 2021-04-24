@@ -189,15 +189,6 @@ function spatial_gradient_at_reference_points(levelset, refpoints, refcellids)
     return spatialgrads
 end
 
-function map_to_reference(spatialpoints, cellids, mesh)
-    referencepoints = similar(spatialpoints)
-    for (idx, cellid) in enumerate(cellids)
-        cellmap = cell_map(mesh, cellid)
-        referencepoints[:, idx] = inverse(cellmap, spatialpoints[:, idx])
-    end
-    return referencepoints
-end
-
 function signed_distance(
     querypoints,
     spatialclosestpoints,
