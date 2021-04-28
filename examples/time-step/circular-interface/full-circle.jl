@@ -20,16 +20,17 @@ function angular_position(points)
     return rad2deg.(angle.(cpoints))
 end
 
-function potential_error(pd, exactpd)
+function normalized_maxnorm_error(pd, exactpd)
     return maximum(abs.(pd .- exactpd)) / abs(exactpd)
 end
 
-function exact_normalized_potential_difference(solver,V01,V02,ΔG0)
-    return (ΔG0 + 1e9PS.interface_potential_difference(solver,V01,V02))/abs(ΔG0)
+function exact_normalized_potential_difference(solver, V01, V02, ΔG0)
+    return (ΔG0 + 1e9PS.interface_potential_difference(solver, V01, V02)) /
+           abs(ΔG0)
 end
 
 polyorder = 3
-nelmts = 17
+nelmts = 15
 penaltyfactor = 1e3
 
 width = 1.0              # mm
@@ -60,6 +61,8 @@ basis = TensorProductBasis(2, polyorder)
 interfacecenter = [0.5, 0.5]
 interfaceradius = 0.4
 outerradius = 1.2
+CFL = 0.25
+
 
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
@@ -68,28 +71,29 @@ levelset = CutCellDG.LevelSet(
     cgmesh,
     basis,
 )
+coeffs0 = copy(CutCellDG.coefficients(levelset))
+paddedmesh = CutCellDG.BoundaryPaddedMesh(cgmesh, 1)
+
 nodalcoordinates = CutCellDG.nodal_coordinates(cgmesh)
-dx = minimum(CutCellDG.element_size(dgmesh))
-penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
-tol = 1e4eps()
-boundingradius = 4.5
-maxiter = 50
-CFL = 0.1
+elementsize = CutCellDG.element_size(cgmesh)
+minelmtsize = minimum(elementsize)
+maxelmtsize = maximum(elementsize)
+penalty = penaltyfactor / minelmtsize * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
+tol = minelmtsize^(polyorder + 1)
+boundingradius = 1.5 * maxelmtsize
+
 angularposition = angular_position(nodalcoordinates .- interfacecenter)
 sortidx = sortperm(angularposition)
 angularposition = angularposition[sortidx]
 
 
-coeffs0 = CutCellDG.coefficients(levelset)
-CutCellDG.update_coefficients!(levelset, coeffs0)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
-refseedpoints, refseedcellids =
-    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+refseedpoints, seedcellids = CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
-    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+    CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
 spatialseedradius =
     vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
-R0 = TES.average(spatialseedradius)
+R0 = mean(spatialseedradius)
 devR0 = std(spatialseedradius)
 analyticalsolution = PS.CylindricalSolver(
     R0,
@@ -105,24 +109,25 @@ pd0 = TES.potential_difference_at_nodal_coordinates(
     cutmesh,
     basis,
     levelset,
-    refseedpoints,
-    refseedcellids,
-    spatialseedpoints,
     stiffness,
     theta0,
+    analyticalsolution,
+    numqp,
+    penalty,
+    spatialseedpoints,
+    seedcellids,
     V01,
     V02,
     ΔG0,
-    numqp,
-    penalty,
-    analyticalsolution,
     tol,
     boundingradius,
-    maxiter,
 )
-pd0 = pd0[sortidx]
-exactpd0 = exact_normalized_potential_difference(analyticalsolution,V01,V02,ΔG0)
-errpd0 = potential_error(pd0, exactpd0)
+exactpd0 =
+    exact_normalized_potential_difference(analyticalsolution, V01, V02, ΔG0)
+err0 = normalized_maxnorm_error(pd0, exactpd0)
+sortedpd0 = pd0[sortidx]
+
+
 
 
 
@@ -130,19 +135,20 @@ errpd0 = potential_error(pd0, exactpd0)
 coeffs1 = TES.step_levelset(
     levelset,
     pd0,
-    refseedpoints,
-    refseedcellids,
     spatialseedpoints,
+    seedcellids,
+    paddedmesh,
     tol,
     boundingradius,
     CFL,
 )
+
+
 CutCellDG.update_coefficients!(levelset, coeffs1)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
-refseedpoints, refseedcellids =
-    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+refseedpoints, seedcellids = CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
-    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+    CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
 spatialseedradius =
     vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
 R1 = TES.average(spatialseedradius)
@@ -161,43 +167,44 @@ pd1 = TES.potential_difference_at_nodal_coordinates(
     cutmesh,
     basis,
     levelset,
-    refseedpoints,
-    refseedcellids,
-    spatialseedpoints,
     stiffness,
     theta0,
+    analyticalsolution,
+    numqp,
+    penalty,
+    spatialseedpoints,
+    seedcellids,
     V01,
     V02,
     ΔG0,
-    numqp,
-    penalty,
-    analyticalsolution,
     tol,
     boundingradius,
-    maxiter,
 )
-pd1 = pd1[sortidx]
-exactpd1 = exact_normalized_potential_difference(analyticalsolution,V01,V02,ΔG0)
-errpd1 = potential_error(pd1,exactpd1)
+exactpd1 =
+    exact_normalized_potential_difference(analyticalsolution, V01, V02, ΔG0)
+err1 = normalized_maxnorm_error(pd1, exactpd1)
+
+sortedpd1 = pd1[sortidx]
+
 
 
 
 coeffs2 = TES.step_levelset(
     levelset,
     pd1,
-    refseedpoints,
-    refseedcellids,
     spatialseedpoints,
+    seedcellids,
+    paddedmesh,
     tol,
     boundingradius,
     CFL,
 )
+
 CutCellDG.update_coefficients!(levelset, coeffs2)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
-refseedpoints, refseedcellids =
-    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+refseedpoints, seedcellids = CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
-    CutCellDG.map_to_spatial(refseedpoints, refseedcellids, cutmesh)
+    CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
 spatialseedradius =
     vec(mapslices(norm, spatialseedpoints .- interfacecenter, dims = 1))
 R2 = TES.average(spatialseedradius)
@@ -216,38 +223,72 @@ pd2 = TES.potential_difference_at_nodal_coordinates(
     cutmesh,
     basis,
     levelset,
-    refseedpoints,
-    refseedcellids,
-    spatialseedpoints,
     stiffness,
     theta0,
+    analyticalsolution,
+    numqp,
+    penalty,
+    spatialseedpoints,
+    seedcellids,
     V01,
     V02,
     ΔG0,
-    numqp,
-    penalty,
-    analyticalsolution,
     tol,
     boundingradius,
-    maxiter,
+)
+exactpd2 =
+    exact_normalized_potential_difference(analyticalsolution, V01, V02, ΔG0)
+err2 = normalized_maxnorm_error(pd2, exactpd2)
+sortedpd2 = pd2[sortidx]
+
+
+
+CutCellDG.update_coefficients!(levelset,coeffs0)
+maxerridx = sortperm(abs.(pd1),rev=true)
+xq = nodalcoordinates[:, maxerridx[1:20]]
+xcp, xcellid = CutCellDG.closest_points_on_zero_levelset(
+    xq,
+    spatialseedpoints,
+    seedcellids,
+    levelset,
+    tol,
+    boundingradius,
+)
+
+testcellids = xcellid[1:5]
+using Plots
+# CutCellDG.load_coefficients!(levelset,xcellid[1])
+CutCellDG.load_coefficients!(levelset,testcellids[2])
+poly = CutCellDG.interpolater(levelset)
+xrange = -1:1e-2:1
+Plots.contour(xrange,xrange,(x,y)->poly([x,y]),levels=[0.0])
+
+
+
+coeffs3 = TES.step_levelset(
+    levelset,
+    pd2,
+    spatialseedpoints,
+    seedcellids,
+    paddedmesh,
+    tol,
+    boundingradius,
+    CFL,
 )
 
 
 
 
+# Δylim = 2.0
+# fig, ax = PyPlot.subplots()
+# ax.plot(angularposition, sortedpd0 / exactpd0)
+# ax.plot(angularposition, sortedpd1 / exactpd1)
+# ax.plot(angularposition, sortedpd2 / exactpd2)
+# # ax.set_ylim(1.0 - Δylim, 1.0 + Δylim)
+# ax.grid()
+# fig
 
 
-
-
-
-
-Δylim = 0.1
-fig, ax = PyPlot.subplots()
-ax.plot(angularposition, pd0/exactpd0)
-ax.plot(angularposition, pd1/exactpd1)
-ax.set_ylim(1.0-Δylim,1.0+ Δylim)
-ax.grid()
-fig
 
 
 

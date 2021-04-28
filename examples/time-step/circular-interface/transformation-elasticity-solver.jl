@@ -109,36 +109,23 @@ function nodal_displacement(
     return solution
 end
 
-function construct_mesh_and_quadratures(
-    meshwidth,
-    nelmts,
-    basis,
-    distancefunction,
-    numqp,
+function construct_merged_mesh_and_quadratures(
+    cutmesh,
+    levelset,
+    numqp;
+    tinyratio = 0.3,
 )
-    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-
-    levelset = CutCellDG.LevelSet(distancefunction, cgmesh, basis)
-
-    cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
     interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
     facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
-    mergedmesh =
-        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
-
-    return mergedmesh, cellquads, facequads, interfacequads, levelset
-end
-
-function construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
-    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
-    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
-
-    mergedmesh =
-        CutCellDG.MergedMesh!(cutmesh, cellquads, facequads, interfacequads)
+    mergedmesh = CutCellDG.MergedMesh!(
+        cutmesh,
+        cellquads,
+        facequads,
+        interfacequads,
+        tinyratio = tinyratio,
+    )
 
     return mergedmesh, cellquads, facequads, interfacequads
 end
@@ -213,9 +200,8 @@ function potential_difference_at_closest_points(
     querypoints,
     nodaldisplacement,
     basis,
-    refseedpoints,
-    refseedcellids,
     spatialseedpoints,
+    seedcellids,
     mesh,
     levelset,
     stiffness,
@@ -224,33 +210,32 @@ function potential_difference_at_closest_points(
     V02,
     tol,
     boundingradius,
-    maxiter
 )
 
-    refclosestpoints, refclosestcellids =
-        CutCellDG.closest_reference_points_on_levelset(
-            querypoints,
-            refseedpoints,
-            spatialseedpoints,
-            refseedcellids,
-            levelset,
-            tol,
-            boundingradius,
-            maxiter
-        )
+    closestpoints, closestcellids = CutCellDG.closest_points_on_zero_levelset(
+        querypoints,
+        spatialseedpoints,
+        seedcellids,
+        levelset,
+        tol,
+        boundingradius,
+    )
 
-    normals =
-        CutCellDG.collect_normals(refclosestpoints, refclosestcellids, levelset)
+    normals = CutCellDG.collect_normals_at_spatial_points(
+        closestpoints,
+        closestcellids,
+        levelset,
+    )
 
-    parentclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
-        refclosestpoints,
-        refclosestcellids,
+    parentclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
+        closestpoints,
+        closestcellids,
         -1,
         mesh,
     )
-    productclosestrefpoints = CutCellDG.map_reference_points_to_merged_mesh(
-        refclosestpoints,
-        refclosestcellids,
+    productclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
+        closestpoints,
+        closestcellids,
         +1,
         mesh,
     )
@@ -259,7 +244,7 @@ function potential_difference_at_closest_points(
         nodaldisplacement,
         basis,
         parentclosestrefpoints,
-        refclosestcellids,
+        closestcellids,
         normals,
         mesh,
         stiffness,
@@ -269,7 +254,7 @@ function potential_difference_at_closest_points(
         nodaldisplacement,
         basis,
         productclosestrefpoints,
-        refclosestcellids,
+        closestcellids,
         normals,
         mesh,
         stiffness,
@@ -293,20 +278,18 @@ function potential_difference_at_nodal_coordinates(
     cutmesh,
     basis,
     levelset,
-    refseedpoints,
-    refseedcellids,
-    spatialseedpoints,
     stiffness,
     theta0,
+    boundarydisplacement,
+    numqp,
+    penalty,
+    spatialseedpoints,
+    seedcellids,
     V01,
     V02,
     ΔG0,
-    numqp,
-    penalty,
-    analyticalsolution,
     tol,
     boundingradius,
-    maxiter
 )
 
     mesh, cellquads, facequads, interfacequads =
@@ -320,7 +303,7 @@ function potential_difference_at_nodal_coordinates(
         interfacequads,
         stiffness,
         theta0,
-        analyticalsolution,
+        boundarydisplacement,
         penalty,
     )
 
@@ -333,9 +316,8 @@ function potential_difference_at_nodal_coordinates(
                 querypoints,
                 nodaldisplacement,
                 basis,
-                refseedpoints,
-                refseedcellids,
                 spatialseedpoints,
+                seedcellids,
                 mesh,
                 levelset,
                 stiffness,
@@ -344,7 +326,6 @@ function potential_difference_at_nodal_coordinates(
                 V02,
                 tol,
                 boundingradius,
-                maxiter
             )
         ) / abs(ΔG0)
 
@@ -354,21 +335,18 @@ end
 function step_levelset(
     levelset,
     levelsetspeed,
-    refseedpoints,
-    refseedcellids,
     spatialseedpoints,
+    seedcellids,
+    paddedmesh,
     tol,
     boundingradius,
     CFL,
 )
 
-    paddedmesh =
-        CutCellDG.BoundaryPaddedMesh(CutCellDG.background_mesh(levelset), 1)
     paddedlevelset = CutCellDG.BoundaryPaddedLevelSet(
         paddedmesh,
-        refseedpoints,
-        refseedcellids,
         spatialseedpoints,
+        seedcellids,
         levelset,
         tol,
         boundingradius,
@@ -379,6 +357,8 @@ function step_levelset(
 
     newcoeffs =
         CutCellDG.step_first_order_levelset(paddedlevelset, levelsetspeed, dt)
+
+    return newcoeffs
 end
 
 function step_interface(
@@ -397,7 +377,7 @@ function step_interface(
     boundingradius = 4.5,
     penaltyfactor = 1e3,
     CFL = 0.5,
-    maxiter = 50
+    maxiter = 50,
 )
 
     cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
@@ -442,7 +422,7 @@ function step_interface(
         analyticalsolution,
         tol,
         boundingradius,
-        maxiter
+        maxiter,
     )
 
     newcoeffs = step_levelset(
@@ -453,7 +433,7 @@ function step_interface(
         spatialseedpoints,
         tol,
         boundingradius,
-        CFL
+        CFL,
     )
 
     return newcoeffs

@@ -213,17 +213,20 @@ function map_to_reference_on_merged_mesh(
     return referencepoints
 end
 
-function collect_normals(refpoints, refcellids, levelset)
-    dim, npts = size(refpoints)
-    @assert length(refcellids) == npts
+function collect_normals_at_spatial_points(spatialpoints, cellids, levelset)
+    dim, npts = size(spatialpoints)
+    @assert length(cellids) == npts
+
     normals = zeros(dim, npts)
-    invjac = inverse_jacobian(background_mesh(levelset))
+    mesh = background_mesh(levelset)
+    invjac = inverse_jacobian(mesh)
 
-    for (idx, cellid) in enumerate(refcellids)
+    for (idx, cellid) in enumerate(cellids)
         load_coefficients!(levelset, cellid)
-        p = refpoints[:, idx]
+        cellmap = cell_map(mesh,cellid)
+        refpoint = inverse(cellmap,spatialpoints[:,idx])
 
-        normals[:, idx] = gradient(interpolater(levelset), p)
+        normals[:, idx] = gradient(interpolater(levelset), refpoint)
     end
     normals = diagm(invjac) * normals
     normalize_normals!(normals)
