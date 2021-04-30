@@ -403,3 +403,7 @@ function integral_norm_on_uniform_mesh(func, quad, mesh, ndofs)
     end
     return sqrt.(vals)
 end
+
+function lame_lambda(k, m)
+    return k - 2m / 3
+end
