@@ -8,13 +8,13 @@ include("plane_incoherent_interface_transformation_solver.jl")
 APS = AnalyticalPlaneSolver
 
 
-L = 5.0
-W = 3.0
+L = 1.0
+W = 1.0
 lambda1, mu1 = 200.0, 80.0
 lambda2, mu2 = 150.0, 40.0
 penaltyfactor = 1e2
 eta = 1
-nelmts = 5
+nelmts = 4
 dx = L / nelmts
 dy = W / nelmts
 penalty = penaltyfactor / dx * (lambda1 + mu1 + lambda2 + mu2) * 0.5
@@ -31,7 +31,7 @@ basis = TensorProductBasis(2, polyorder)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
 
-R = 0.1
+R = 0.51
 x0 = [R, 0.0]
 normal = [1.0, 0.0]
 levelset = CutCellDG.LevelSet(
@@ -44,6 +44,15 @@ cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
 interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+mergedmesh = CutCellDG.MergedMesh!(
+    cutmesh,
+    cellquads,
+    facequads,
+    interfacequads,
+    tinyratio = 0.3,
+)
+
+@assert CutCellDG.has_merged_cells(mergedmesh)
 
 sysmatrix = CutCellDG.SystemMatrix()
 sysrhs = CutCellDG.SystemRHS()
@@ -53,21 +62,21 @@ CutCellDG.assemble_displacement_bilinear_forms!(
     basis,
     cellquads,
     stiffness,
-    cutmesh,
+    mergedmesh,
 )
 CutCellDG.assemble_bulk_transformation_linear_form!(
     sysrhs,
     transfstress,
     basis,
     cellquads,
-    cutmesh,
+    mergedmesh,
 )
 CutCellDG.assemble_interelement_condition!(
     sysmatrix,
     basis,
     facequads,
     stiffness,
-    cutmesh,
+    mergedmesh,
     penalty,
     eta,
 )
@@ -76,7 +85,7 @@ CutCellDG.assemble_interelement_transformation_linear_form!(
     transfstress,
     basis,
     facequads,
-    cutmesh,
+    mergedmesh,
 )
 
 CutCellDG.assemble_incoherent_interface_condition!(
@@ -84,7 +93,7 @@ CutCellDG.assemble_incoherent_interface_condition!(
     basis,
     interfacequads,
     stiffness,
-    cutmesh,
+    mergedmesh,
     penalty,
     eta,
 )
@@ -93,7 +102,7 @@ CutCellDG.assemble_incoherent_interface_transformation_linear_form!(
     transfstress,
     basis,
     interfacequads,
-    cutmesh,
+    mergedmesh,
 )
 
 CutCellDG.assemble_penalty_displacement_component_bc!(
@@ -103,7 +112,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     basis,
     facequads,
     stiffness,
-    cutmesh,
+    mergedmesh,
     x -> x[1] ≈ 0.0,
     [1.0, 0.0],
     penalty,
@@ -113,7 +122,7 @@ CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     transfstress,
     basis,
     facequads,
-    cutmesh,
+    mergedmesh,
     x -> x[1] ≈ 0.0,
     [1.0, 0.0],
 )
@@ -125,7 +134,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     basis,
     facequads,
     stiffness,
-    cutmesh,
+    mergedmesh,
     x -> x[2] ≈ 0.0,
     [0.0, 1.0],
     penalty,
@@ -135,7 +144,7 @@ CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     transfstress,
     basis,
     facequads,
-    cutmesh,
+    mergedmesh,
     x -> x[2] ≈ 0.0,
     [0.0, 1.0],
 )
@@ -147,7 +156,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     basis,
     facequads,
     stiffness,
-    cutmesh,
+    mergedmesh,
     x -> x[1] ≈ L,
     [1.0, 0.0],
     penalty,
@@ -157,13 +166,13 @@ CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     transfstress,
     basis,
     facequads,
-    cutmesh,
+    mergedmesh,
     x -> x[1] ≈ L,
     [1.0, 0.0],
 )
 
-matrix = CutCellDG.sparse_displacement_operator(sysmatrix, cutmesh)
-rhs = CutCellDG.displacement_rhs_vector(sysrhs, cutmesh)
+matrix = CutCellDG.sparse_displacement_operator(sysmatrix, mergedmesh)
+rhs = CutCellDG.displacement_rhs_vector(sysrhs, mergedmesh)
 
 sol = matrix \ rhs
 disp = reshape(sol, 2, :)
@@ -171,15 +180,13 @@ disp = reshape(sol, 2, :)
 
 solver = APS.PlaneSolver(L, W, R, lambda1, mu1, lambda2, mu2, theta0)
 
-parentdisp = APS.parent_displacement_field(solver, [R, W])
-productdisp = APS.product_displacement_field(solver, [R, W])
 
 err = mesh_L2_error(
     disp,
     x -> APS.displacement_field(solver, x),
     basis,
     cellquads,
-    cutmesh,
+    mergedmesh,
 )
 
 @test maximum(err) < 1e2eps()

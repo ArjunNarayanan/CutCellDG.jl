@@ -32,6 +32,10 @@ function reference_corner(mesh::UniformMesh)
     return mesh.x0
 end
 
+function reference_corner(mesh)
+    return reference_corner(background_mesh(mesh))
+end
+
 function mesh_widths(mesh::UniformMesh)
     return mesh.widths
 end

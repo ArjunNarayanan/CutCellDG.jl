@@ -46,22 +46,11 @@ end
 
 @safetestset "Test Simple Tension" begin
     include("simple_tension/test_simple_tension.jl")
-end
-
-@safetestset "Test Cut Simple Tension" begin
     include("simple_tension/test_cut_simple_tension.jl")
-end
-
-@safetestset "Test Merged Simple Tension" begin
     include("simple_tension/test_merged_simple_tension.jl")
-end
-
-@safetestset "Test Transformation Strain Simple Tension" begin
     include("simple_tension/test_transformation_strain_simple_tension.jl")
-end
-
-@safetestset "Test Incoherent Interface Simple Tension" begin
     include("simple_tension/test_incoherent_interface_simple_tension.jl")
+    include("simple_tension/test_incoherent_interface_transformation_simple_tension.jl")
 end
 
 @safetestset "Test Vertical Plane Interface L2 Displacement Convergence" begin
