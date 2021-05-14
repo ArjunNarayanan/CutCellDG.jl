@@ -194,6 +194,25 @@ function map_to_spatial(refpoints, refcellids, mesh)
     return spatialpoints
 end
 
+function map_to_spatial_on_merged_mesh(
+    refpoints,
+    refcellids,
+    levelsetsign,
+    mesh,
+)
+
+    dim, numpts = size(refpoints)
+    @assert length(refcellids) == numpts
+    spatialpoints = zeros(dim, numpts)
+
+    for idx = 1:numpts
+        cellid = refcellids[idx]
+        cellmap = cell_map(mesh, levelsetsign, cellid)
+        spatialpoints[:, idx] = cellmap(refpoints[:, idx])
+    end
+    return spatialpoints
+end
+
 function map_to_reference(spatialpoints, cellids, mesh)
     referencepoints = similar(spatialpoints)
     for (idx, cellid) in enumerate(cellids)
@@ -227,8 +246,8 @@ function collect_normals_at_spatial_points(spatialpoints, cellids, levelset)
 
     for (idx, cellid) in enumerate(cellids)
         load_coefficients!(levelset, cellid)
-        cellmap = cell_map(mesh,cellid)
-        refpoint = inverse(cellmap,spatialpoints[:,idx])
+        cellmap = cell_map(mesh, cellid)
+        refpoint = inverse(cellmap, spatialpoints[:, idx])
 
         normals[:, idx] = gradient(interpolater(levelset), refpoint)
     end

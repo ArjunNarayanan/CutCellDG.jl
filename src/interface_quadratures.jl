@@ -202,3 +202,43 @@ function collect_interface_normals(interfacequads, mesh, cellids)
     end
     return interfacenormals
 end
+
+function collect_interface_quadrature_points(
+    interfacequads,
+    cellsign,
+    mesh,
+    cellids,
+)
+    totalnumqps = sum([length(interfacequads[1, cellid]) for cellid in cellids])
+    quadraturepoints = zeros(2, totalnumqps)
+    quadraturecellids = zeros(Int,totalnumqps)
+    start = 1
+
+    for cellid in cellids
+        quad = interfacequads[cellsign, cellid]
+        qps = points(quad)
+        numqps = size(qps)[2]
+
+        stop = start + numqps - 1
+
+        quadraturepoints[:, start:stop] = qps
+        quadraturecellids[start:stop] = repeat([cellid],numqps)
+        start = stop + 1
+    end
+    return quadraturepoints,quadraturecellids
+end
+
+function collect_interface_quadrature_points(interfacequads, levelsetsign, mesh)
+
+    ncells = number_of_cells(mesh)
+    cellsign = [cell_sign(mesh, cellid) for cellid = 1:ncells]
+    cellids = findall(cellsign .== 0)
+    qps,qpcellids = collect_interface_quadrature_points(
+        interfacequads,
+        levelsetsign,
+        mesh,
+        cellids,
+    )
+
+    return qps,qpcellids
+end
