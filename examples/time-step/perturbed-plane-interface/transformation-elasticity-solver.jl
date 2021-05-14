@@ -411,6 +411,60 @@ function potential_difference_at_nodal_coordinates(
     return potentialdifference
 end
 
+function overpotential_difference_at_query_points(
+    querypoints,
+    cutmesh,
+    basis,
+    levelset,
+    stiffness,
+    theta0,
+    numqp,
+    penalty,
+    spatialseedpoints,
+    seedcellids,
+    V01,
+    V02,
+    tol,
+    boundingradius,
+)
+
+    mesh, cellquads, facequads, interfacequads =
+        construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
+
+    nodaldisplacement = nodal_displacement(
+        mesh,
+        basis,
+        cellquads,
+        facequads,
+        interfacequads,
+        stiffness,
+        theta0,
+        penalty,
+    )
+
+    potentialdifference =
+        (
+             potential_difference_at_closest_points(
+                querypoints,
+                nodaldisplacement,
+                basis,
+                spatialseedpoints,
+                seedcellids,
+                mesh,
+                levelset,
+                stiffness,
+                theta0,
+                V01,
+                V02,
+                tol,
+                boundingradius,
+            )
+        )
+
+    return potentialdifference
+end
+
+
 function potential_difference_at_query_points(
     querypoints,
     cutmesh,
