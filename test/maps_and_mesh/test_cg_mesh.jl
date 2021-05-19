@@ -1,6 +1,7 @@
 using Test
 using CartesianMesh
 using PolynomialBasis
+import ImplicitDomainQuadrature: tensor_product_points
 # using Revise
 using CutCellDG
 include("../useful_routines.jl")
@@ -35,21 +36,17 @@ testnodeconn = vcat(43:46,50:53,57:60,64:67)
 @test CutCellDG.nodes_per_mesh_side(femesh) == [10,7]
 @test CutCellDG.number_of_nodes(femesh) == 70
 
-basis = TensorProductBasis(2,4)
-mesh = CutCellDG.CGMesh([2.,1.],[2.,1.],[3,2],basis)
-# @test CutCell.cell_id(mesh,[3.,1.25]) == 3
-# @test CutCell.cell_id(mesh,[10/3+eps(),1.5+eps()]) == 6
-
-# @test allequal(CutCell.bottom_boundary_node_ids(femesh),1:7:64)
-# @test allequal(CutCell.right_boundary_node_ids(femesh),64:70)
-# @test allequal(CutCell.top_boundary_node_ids(femesh),7:7:70)
-# @test allequal(CutCell.left_boundary_node_ids(femesh),1:7)
-#
-# mesh = CutCell.Mesh([0.,0.],[4.,3.],[4,3],9)
-# isboundarycell = CutCell.is_boundary_cell(mesh)
-# testboundarycell = ones(Int,12)
-# testboundarycell[5] = testboundarycell[8] = 0
-# @test allequal(isboundarycell,testboundarycell)
-#
-# isboundarycell = CutCell.is_boundary_cell(mesh.cellconnectivity)
-# @test allequal(isboundarycell,testboundarycell)
+mesh = CutCellDG.CGMesh([2.,1.],[2.,1.],[3,2],9)
+@test CutCellDG.number_of_cells(mesh) == 6
+@test CutCellDG.number_of_nodes(mesh) == 35
+x1 = range(2.0,stop=4.0,length=7)
+x2 = range(1.0,stop=2.0,length=5)
+testpoints = tensor_product_points(x1',x2')
+@test allapprox(CutCellDG.nodal_coordinates(mesh),testpoints)
+testconnectivity = [1 2 3 6 7 8 11 12 13
+                    3 4 5 8 9 10 13 14 15
+                    11 12 13 16 17 18 21 22 23
+                    13 14 15 18 19 20 23 24 25
+                    21 22 23 26 27 28 31 32 33
+                    23 24 25 28 29 30 33 34 35]'
+@test all([allequal(CutCellDG.nodal_connectivity(mesh,i),testconnectivity[:,i]) for i = 1:6])

@@ -1,7 +1,7 @@
 using PolynomialBasis
 using ImplicitDomainQuadrature
 using Test
-# using Revise
+using Revise
 using CutCellDG
 include("../useful_routines.jl")
 
@@ -19,8 +19,8 @@ C = M\R
 interp = InterpolatingPolynomial(1,basis)
 update!(interp,C)
 
-basis3 = TensorProductBasis(2,3)
-p = CutCellDG.interpolation_points(basis3)
-vals = mapslices(interp,p,dims=1)
-testvals = mapslices(testfunc,p,dims=1)
+xrange = range(-1,stop=1,length=10)
+points = ImplicitDomainQuadrature.tensor_product_points(xrange',xrange')
+vals = mapslices(interp,points,dims=1)
+testvals = mapslices(testfunc,points,dims=1)
 @test allapprox(vals,testvals)

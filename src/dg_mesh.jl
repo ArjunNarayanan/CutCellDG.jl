@@ -46,8 +46,7 @@ function DGMesh(mesh, refcoords)
     )
 end
 
-function DGMesh(x0, widths, nelements, basis)
-    refpoints = interpolation_points(basis)
+function DGMesh(x0, widths, nelements, refpoints)
     mesh = UniformMesh(x0, widths, nelements)
     return DGMesh(mesh, refpoints)
 end

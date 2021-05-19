@@ -6,12 +6,12 @@ using CutCellDG
 include("../useful_routines.jl")
 
 
-
-basis = TensorProductBasis(2,1)
+basis = LagrangeTensorProductBasis(2,1)
 mesh = UniformMesh([0.,0.],[2.,1.],[2,2])
 cellmaps = CutCellDG.construct_cell_maps(mesh)
 
-nodalcoordinates = CutCellDG.dg_nodal_coordinates(cellmaps,basis.points)
+points = interpolation_points(basis)
+nodalcoordinates = CutCellDG.dg_nodal_coordinates(cellmaps,points)
 testnodalcoordinates = [0.  0.  1.  1.  0.  0.  1.  1.  1.  1.  2.  2.  1.  1.  2.  2.
                         0.  .5  0.  .5  .5  1.  .5  1.  0.  .5  0.  .5  .5  1.  .5  1.]
 @test allapprox(nodalcoordinates,testnodalcoordinates)
@@ -25,8 +25,9 @@ testnodalconnectivity = [1  5  9   13
 
 
 
-basis = TensorProductBasis(2,2)
-dgmesh = CutCellDG.DGMesh([0.,0.],[2.,1.],[2,2],basis)
+basis = LagrangeTensorProductBasis(2,2)
+points = interpolation_points(basis)
+dgmesh = CutCellDG.DGMesh([0.,0.],[2.,1.],[2,2],points)
 nodalcoordinates = CutCellDG.nodal_coordinates(dgmesh)
 tn1 = [0.  0.   0.  0.5  0.5  0.5  1.  1.   1.  0.  0.   0.  0.5  0.5  0.5  1.  1.  1.
        0.  0.25 0.5 0.   0.25 0.5  0.  0.25 0.5 0.5 0.75 1.  0.5  0.75 1.   0.5 0.75 1.]

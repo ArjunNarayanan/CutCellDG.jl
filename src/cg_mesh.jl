@@ -51,13 +51,7 @@ function CGMesh(mesh, nodesperelement)
     )
 end
 
-function CGMesh(x0, meshwidths, nelements, nodesperelement::Int)
-    mesh = UniformMesh(x0, meshwidths, nelements)
-    return CGMesh(mesh, nodesperelement)
-end
-
-function CGMesh(x0, meshwidths, nelements, basis)
-    nodesperelement = number_of_basis_functions(basis)
+function CGMesh(x0, meshwidths, nelements, nodesperelement)
     mesh = UniformMesh(x0, meshwidths, nelements)
     return CGMesh(mesh, nodesperelement)
 end

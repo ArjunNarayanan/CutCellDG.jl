@@ -1,15 +1,16 @@
 using PolynomialBasis
-# using Revise
+using Revise
 using CutCellDG
 include("../useful_routines.jl")
 
 polyorder = 1
 numqp = 2
 
-basis = TensorProductBasis(2, polyorder)
+basis = HermiteTensorProductBasis(2)
 levelset = InterpolatingPolynomial(1, basis)
-mesh = CutCellDG.CGMesh([0.0, 0.0], [3.0, 1.0], [3, 1], basis)
-nodalcoordinates = CutCellDG.nodal_coordinates(mesh)
+dim,numpts = size(interpolation_points(basis))
+mesh = CutCellDG.CGMesh([0.0, 0.0], [3.0, 1.0], [3, 1], numpts)
+
 
 x0 = [1.5,0.0]
 normal = [1.,0.]
