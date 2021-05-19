@@ -46,6 +46,19 @@ function displacement_bilinear_form(
     return matrix
 end
 
+function mass_matrix(basis, quad, ndofs, scale)
+    nf = number_of_basis_functions(basis)
+    totaldofs = nf * ndofs
+    matrix = zeros(totaldofs, totaldofs)
+    for (p, w) in quad
+        vals = basis(p)
+
+        NI = interpolation_matrix(vals, ndofs)
+        matrix .+= NI' * NI * scale * w
+    end
+    return matrix
+end
+
 function mass_matrix(basis, quad1, quad2, ndofs, facescale)
     numqp = length(quad1)
     @assert length(quad2) == length(facescale) == numqp

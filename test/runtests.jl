@@ -16,6 +16,10 @@ end
     include("miscellaneous/test_levelset.jl")
 end
 
+@safetestset "Test Bicubic Hermite Basis" begin
+    include("miscellaneous/test_bicubic_hermite_basis.jl")
+end
+
 @safetestset "Test Cut Mesh" begin
     include("maps_and_mesh/test_cut_mesh.jl")
 end
