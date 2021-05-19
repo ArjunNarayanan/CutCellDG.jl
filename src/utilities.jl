@@ -48,11 +48,6 @@ function cell_sign_to_row(s)
     return row
 end
 
-function levelset_coefficients(distancefunc, mesh)
-    nodalcoordinates = nodal_coordinates(mesh)
-    return distancefunc(nodalcoordinates)
-end
-
 function levelset_normals(levelset, points, invjac)
     npts = size(points)[2]
     if npts == 0
@@ -243,4 +238,9 @@ function collect_normals_at_spatial_points(spatialpoints, cellids, levelset)
     normals = diagm(invjac) * normals
     normalize_normals!(normals)
     return normals
+end
+
+function hermite_dofs_per_node(dim)
+    @assert dim == 2
+    return 4
 end

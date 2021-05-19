@@ -14,16 +14,10 @@ function assemble_cell_body_force!(
     quad = cellquads[cellsign, cellid]
     rhs = linear_form(rhsfunc, basis, quad, cellmap, dim, detjac)
     nodeids = nodal_connectivity(mesh, cellsign, cellid)
-    assemble_cell_rhs!(systemrhs,nodeids,dim,rhs)
+    assemble_cell_rhs!(systemrhs, nodeids, dim, rhs)
 end
 
-function assemble_body_force!(
-    systemrhs,
-    rhsfunc,
-    basis,
-    cellquads,
-    mesh,
-)
+function assemble_body_force!(systemrhs, rhsfunc, basis, cellquads, mesh)
 
     ncells = number_of_cells(mesh)
     for cellid = 1:ncells

@@ -1,10 +1,10 @@
 struct SystemMatrix
-    rows
-    cols
-    vals
-    function SystemMatrix(rows,cols,vals)
+    rows::Any
+    cols::Any
+    vals::Any
+    function SystemMatrix(rows, cols, vals)
         @assert length(rows) == length(cols) == length(vals)
-        new(rows,cols,vals)
+        new(rows, cols, vals)
     end
 end
 
@@ -61,7 +61,8 @@ function element_dofs(nodeids, dofspernode)
     numnodes = length(nodeids)
     extnodeids = repeat(nodeids, inner = dofspernode)
     dofs = repeat(1:dofspernode, numnodes)
-    edofs = [node_to_dof_id(n, d, dofspernode) for (n, d) in zip(extnodeids, dofs)]
+    edofs =
+        [node_to_dof_id(n, d, dofspernode) for (n, d) in zip(extnodeids, dofs)]
     return edofs
 end
 
@@ -73,7 +74,13 @@ function element_dofs_to_operator_dofs(rowdofs, coldofs)
     return rows, cols
 end
 
-function assemble_couple_cell_matrix!(sysmatrix, nodeids1, nodeids2, dofspernode, vals)
+function assemble_couple_cell_matrix!(
+    sysmatrix,
+    nodeids1,
+    nodeids2,
+    dofspernode,
+    vals,
+)
     edofs1 = element_dofs(nodeids1, dofspernode)
     edofs2 = element_dofs(nodeids2, dofspernode)
 
@@ -82,7 +89,7 @@ function assemble_couple_cell_matrix!(sysmatrix, nodeids1, nodeids2, dofspernode
 end
 
 function assemble_cell_matrix!(sysmatrix, nodeids, dofspernode, vals)
-    assemble_couple_cell_matrix!(sysmatrix,nodeids,nodeids,dofspernode,vals)
+    assemble_couple_cell_matrix!(sysmatrix, nodeids, nodeids, dofspernode, vals)
 end
 
 function assemble_cell_rhs!(sysrhs, nodeids, dofspernode, vals)
@@ -91,23 +98,33 @@ function assemble_cell_rhs!(sysrhs, nodeids, dofspernode, vals)
 end
 
 function sparse_operator(sysmatrix, ndofs)
-    return dropzeros!(sparse(sysmatrix.rows, sysmatrix.cols, sysmatrix.vals, ndofs, ndofs))
+    return dropzeros!(
+        sparse(sysmatrix.rows, sysmatrix.cols, sysmatrix.vals, ndofs, ndofs),
+    )
 end
 
-function sparse_displacement_operator(sysmatrix, mesh)
+function sparse_operator(sysmatrix, mesh, dofspernode)
     numnodes = number_of_nodes(mesh)
-    dim = dimension(mesh)
-    totaldofs = dim*numnodes
+    totaldofs = dofspernode * numnodes
     return sparse_operator(sysmatrix, totaldofs)
 end
 
-function rhs_vector(sysrhs,ndofs)
-    return Array(sparsevec(sysrhs.rows,sysrhs.vals,ndofs))
+function sparse_displacement_operator(sysmatrix, mesh)
+    dim = dimension(mesh)
+    return sparse_operator(sysmatrix, mesh, dim)
 end
 
-function displacement_rhs_vector(sysrhs,mesh)
+function rhs_vector(sysrhs, ndofs)
+    return Array(sparsevec(sysrhs.rows, sysrhs.vals, ndofs))
+end
+
+function rhs_vector(sysrhs, mesh, dofspernode)
     numnodes = number_of_nodes(mesh)
-    dim = dimension(mesh)
-    totaldofs = dim*numnodes
+    totaldofs = dofspernode * numnodes
     return rhs_vector(sysrhs, totaldofs)
+end
+
+function displacement_rhs_vector(sysrhs, mesh)
+    dim = dimension(mesh)
+    return rhs_vector(sysrhs, mesh, dim)
 end

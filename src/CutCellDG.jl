@@ -32,6 +32,7 @@ include("levelset_closest_points.jl")
 include("levelset_propagate.jl")
 
 include("assembly.jl")
+include("assemble_hermite_levelset_initializers.jl")
 include("assemble_displacement_bilinear_forms.jl")
 include("assemble_interelement_condition.jl")
 include("assemble_interface_condition.jl")
