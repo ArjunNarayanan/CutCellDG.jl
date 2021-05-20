@@ -53,11 +53,15 @@ normal = [0.0, 1.0]
 tol = 1e-8
 boundingradius = 6.0
 
-basis = TensorProductBasis(2, polyorder)
-mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], basis)
+levelsetbasis = LagrangeTensorProductBasis(2, polyorder)
+dim, nf = size(interpolation_points(levelsetbasis))
+mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], nf)
 
-levelset =
-    CutCellDG.LevelSet(x -> plane_distance_function(x, normal, xI), mesh, basis)
+levelset = CutCellDG.LevelSet(
+    x -> plane_distance_function(x, normal, xI),
+    mesh,
+    levelsetbasis,
+)
 
 paddedmesh = CutCellDG.BoundaryPaddedMesh(
     CutCellDG.background_mesh(levelset),
@@ -102,12 +106,16 @@ normal = [1.0, 0.0]
 tol = 1e-8
 boundingradius = 6.0
 
-basis = TensorProductBasis(2, polyorder)
-mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], basis)
+levelsetbasis = LagrangeTensorProductBasis(2, polyorder)
+dim, nf = size(interpolation_points(levelsetbasis))
+mesh = CutCellDG.CGMesh(x0, [L, W], [nelmtsx, nelmtsy], nf)
 numnodes = CutCellDG.number_of_nodes(mesh)
 
-levelset =
-    CutCellDG.LevelSet(x -> plane_distance_function(x, normal, xI), mesh, basis)
+levelset = CutCellDG.LevelSet(
+    x -> plane_distance_function(x, normal, xI),
+    mesh,
+    levelsetbasis,
+)
 paddedmesh = CutCellDG.BoundaryPaddedMesh(
     CutCellDG.background_mesh(levelset),
     numghostlayers,
@@ -115,8 +123,7 @@ paddedmesh = CutCellDG.BoundaryPaddedMesh(
 cutmesh = CutCellDG.CutMesh(mesh, levelset)
 
 
-refseedpoints, seedcellids =
-    CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
+refseedpoints, seedcellids = CutCellDG.seed_zero_levelset(2, levelset, cutmesh)
 spatialseedpoints =
     CutCellDG.map_to_spatial(refseedpoints, seedcellids, cutmesh)
 

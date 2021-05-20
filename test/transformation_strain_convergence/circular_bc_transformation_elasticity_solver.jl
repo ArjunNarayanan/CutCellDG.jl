@@ -265,18 +265,24 @@ end
 function construct_mesh_and_quadratures(
     meshwidth,
     nelmts,
-    basis,
+    elasticitybasis,
     interfacecenter,
     interfaceradius,
     numqp,
 )
-    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
+    mesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], refpoints)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], nf)
 
     levelset = CutCellDG.LevelSet(
-        x -> -circle_distance_function(x, interfacecenter, interfaceradius),
+        x -> -circle_distance_function(x, interfacecenter, interfaceradius)[1],
         cgmesh,
-        basis,
+        levelsetbasis,
+        quad
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)

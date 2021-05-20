@@ -55,18 +55,22 @@ facequads = CutCellDG.face_quadratures(4)
 
 polyorder = 1
 numqp = 2
-basis = TensorProductBasis(2, polyorder)
-levelset = InterpolatingPolynomial(1, basis)
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2,4)
+elasticitybasis = LagrangeTensorProductBasis(2,polyorder)
+dim,levelsetnf = size(interpolation_points(levelsetbasis))
+points = interpolation_points(elasticitybasis)
+levelset = InterpolatingPolynomial(1, levelsetbasis)
 x0 = [0.0, 0.0]
 meshwidths = [2.0, 1.0]
 nelements = [2, 1]
-dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, basis)
-cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, basis)
+dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, points)
+cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, levelsetnf)
 
 normal = [1.0, 0.0]
 xI = [0.5, 0.0]
 
-levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,basis)
+levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,levelsetbasis,quad)
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)

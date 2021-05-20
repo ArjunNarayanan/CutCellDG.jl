@@ -23,13 +23,13 @@ function error_for_plane_interface(
     alpha = 0.1
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
-    basis = TensorProductBasis(2, polyorder)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 
-    mergedmesh, cellquads, facequads, interfacequads =
+    mergedmesh, cellquads, facequads, interfacequads, levelset =
         construct_mesh_and_quadratures(
             [L, W],
             nelmts,
-            basis,
+            elasticitybasis,
             x -> plane_distance_function(x, normal, x0),
             numqp,
         )
@@ -39,14 +39,14 @@ function error_for_plane_interface(
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -55,7 +55,7 @@ function error_for_plane_interface(
     )
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -66,7 +66,7 @@ function error_for_plane_interface(
         sysmatrix,
         sysrhs,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -76,7 +76,7 @@ function error_for_plane_interface(
     CutCellDG.assemble_body_force!(
         sysrhs,
         x -> body_force(lambda, mu, alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )
@@ -90,7 +90,7 @@ function error_for_plane_interface(
     err = mesh_L2_error(
         nodaldisplacement,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )

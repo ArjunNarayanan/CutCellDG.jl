@@ -8,17 +8,21 @@ include("../useful_routines.jl")
 polyorder = 1
 numqp = 2
 
-basis = TensorProductBasis(2, polyorder)
+
+elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2,4)
 x0 = [0.0, 0.0]
 meshwidths = [3.0, 1.0]
 nelements = [3, 1]
-dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, basis)
-cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, basis)
+points = interpolation_points(elasticitybasis)
+dim,nf = size(interpolation_points(levelsetbasis))
+dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, points)
+cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, nf)
 
 normal = [1.0, 0.0]
 xI = [0.5, 0.0]
-levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,basis)
-
+levelset = CutCellDG.LevelSet(x->plane_distance_function(x,normal,xI),cgmesh,levelsetbasis,quad)
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 
 interfacequads =
@@ -28,12 +32,12 @@ testcelltoquad = [1, 0, 0]
 @test allequal(interfacequads.celltoquad, testcelltoquad)
 
 testnormals = repeat(normal, inner = (1, numqp))
-@test allapprox(testnormals, CutCellDG.interface_normals(interfacequads, 1))
+@test allapprox(testnormals, CutCellDG.interface_normals(interfacequads, 1),1e3eps())
 @test interfacequads[1, 1] ≈ interfacequads[-1, 1]
 
 testtangents = repeat([0.0, 1.0], inner = (1, numqp))
 testscaleareas = repeat([0.5], numqp)
-@test allapprox(testtangents, CutCellDG.interface_tangents(interfacequads, 1))
+@test allapprox(testtangents, CutCellDG.interface_tangents(interfacequads, 1),1e3eps())
 @test allapprox(
     testscaleareas,
     CutCellDG.interface_scale_areas(interfacequads, 1),

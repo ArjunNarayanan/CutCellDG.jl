@@ -15,20 +15,21 @@ struct CutMesh
     end
 end
 
-function Base.show(io::IO,cutmesh::CutMesh)
+function Base.show(io::IO, cutmesh::CutMesh)
     dim = dimension(cutmesh)
     x0 = reference_corner(cutmesh)
     meshwidths = mesh_widths(cutmesh)
     numnodes = number_of_nodes(cutmesh)
     ncells = number_of_cells(cutmesh)
-    str = "CutMesh\n\tDimension : $dim\n\tCorner : $x0\n\tWidth : $meshwidths"*
-          "\n\tNum. Nodes : $numnodes\n\tNum. Cells : $ncells"
-    print(io,str)
+    str =
+        "CutMesh\n\tDimension : $dim\n\tCorner : $x0\n\tWidth : $meshwidths" *
+        "\n\tNum. Nodes : $numnodes\n\tNum. Cells : $ncells"
+    print(io, str)
 end
 
 function CutMesh(mesh, levelset; tol = 1e-4, perturbation = 1e-2)
     dx = minimum(element_size(mesh))
-    cellsign = cell_sign!(levelset, tol, perturbation*dx)
+    cellsign = cell_sign!(levelset, tol, perturbation * dx)
 
     posactivenodeids = active_node_ids(mesh, +1, cellsign)
     negactivenodeids = active_node_ids(mesh, -1, cellsign)
@@ -99,10 +100,29 @@ function nodal_coordinates(cutmesh::CutMesh)
     return nodal_coordinates(background_mesh(cutmesh))
 end
 
+function perturb_lagrange_levelset_coefficients!(levelset, cellid, perturbation)
+    newcoeffs = coefficients(levelset, cellid) .+ perturbation
+    update_coefficients!(levelset, cellid, newcoeffs)
+    load_coefficients!(levelset,cellid)
+end
+
+function perturb_hermite_levelset_coefficients!(levelset, cellid, perturbation)
+    dim = dimension(levelset)
+    interpidx = hermite_interpolation_indices(dim)
+    cellcoeffs = coefficients(levelset, cellid)
+    perturbvec = zeros(length(cellcoeffs))
+    perturbvec[interpidx] .= perturbation
+    newcoeffs = cellcoeffs + perturbvec
+    update_coefficients!(levelset, cellid, newcoeffs)
+    load_coefficients!(levelset,cellid)
+end
+
 function cell_sign!(levelset, tol, perturbation)
     ncells = number_of_cells(background_mesh(levelset))
     cellsign = zeros(Int, ncells)
     xL, xR = [-1.0, -1.0], [1.0, 1.0]
+    basistype = typeof(basis(interpolater(levelset)))
+
     for cellid = 1:ncells
         load_coefficients!(levelset, cellid)
 
@@ -111,9 +131,25 @@ function cell_sign!(levelset, tol, perturbation)
             cellsign[cellid] = s
         else
             # @warn "Perturbing levelset function by perturbation = $perturbation"
-            newcoeffs = coefficients(levelset, cellid) .+ perturbation
-            update_coefficients!(levelset, cellid, newcoeffs)
-            load_coefficients!(levelset, cellid)
+            # newcoeffs = coefficients(levelset, cellid) .+ perturbation
+            # update_coefficients!(levelset, cellid, newcoeffs)
+            # load_coefficients!(levelset, cellid)
+
+            if basistype <: LagrangeTensorProductBasis
+                perturb_lagrange_levelset_coefficients!(
+                    levelset,
+                    cellid,
+                    perturbation,
+                )
+            elseif basistype <: HermiteTensorProductBasis
+                perturb_hermite_levelset_coefficients!(
+                    levelset,
+                    cellid,
+                    perturbation,
+                )
+            else
+                error("Unexpected basistype $basistype")
+            end
 
             s = sign(interpolater(levelset), xL, xR, tol = tol)
             if (s == +1 || s == 0 || s == -1)

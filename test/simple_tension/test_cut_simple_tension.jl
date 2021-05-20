@@ -26,14 +26,20 @@ function test_cut_simple_tension()
     polyorder = 2
     numqp = required_quadrature_order(polyorder)
 
-    basis = TensorProductBasis(2, polyorder)
-    cgmesh = CutCellDG.CGMesh(x0, widths, nelements, basis)
-    mesh = CutCellDG.DGMesh(x0, widths, nelements, basis)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2,4)
+    dim,nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
+    cgmesh = CutCellDG.CGMesh(x0, widths, nelements, nf)
+    mesh = CutCellDG.DGMesh(x0, widths, nelements, refpoints)
 
     levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, interfacenormal, interfacepoint),
         cgmesh,
-        basis,
+        levelsetbasis,
+        quad
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
@@ -47,14 +53,14 @@ function test_cut_simple_tension()
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         cutmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -65,7 +71,7 @@ function test_cut_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -77,7 +83,7 @@ function test_cut_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -89,7 +95,7 @@ function test_cut_simple_tension()
         sysmatrix,
         sysrhs,
         x -> dx,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -99,7 +105,7 @@ function test_cut_simple_tension()
     )
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         cutmesh,

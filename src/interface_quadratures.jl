@@ -41,7 +41,9 @@ struct InterfaceQuadratures
 end
 
 function InterfaceQuadratures(cutmesh, levelset, numqp)
-
+    polyorder = order(levelset)
+    dim = dimension(cutmesh)
+    interpgrad = InterpolatingPolynomial(dim, dim, polyorder)
     numcells = number_of_cells(cutmesh)
 
     xL, xR = [-1.0, -1.0], [1.0, 1.0]
@@ -60,6 +62,7 @@ function InterfaceQuadratures(cutmesh, levelset, numqp)
     counter = 1
     for cellid in interfacecellids
         load_coefficients!(levelset, cellid)
+        update_interpolating_gradient!(interpgrad,interpolater(levelset))
         cellmap = cell_map(cutmesh, cellid)
 
         try
@@ -70,6 +73,7 @@ function InterfaceQuadratures(cutmesh, levelset, numqp)
                 scaleareas,
                 counter,
                 interpolater(levelset),
+                interpgrad,
                 xL,
                 xR,
                 numqp,
@@ -84,6 +88,7 @@ function InterfaceQuadratures(cutmesh, levelset, numqp)
                 scaleareas,
                 counter,
                 interpolater(levelset),
+                interpgrad,
                 xL,
                 xR,
                 numqp,
@@ -115,13 +120,21 @@ function update_interface_quadrature!(
     scaleareas,
     counter,
     levelset,
+    levelsetgrad,
     xL,
     xR,
     numqp,
     invjac,
     numsplits,
 )
-    squad = surface_quadrature(levelset, xL, xR, numqp, numsplits = numsplits)
+    squad = surface_quadrature(
+        levelset,
+        levelsetgrad,
+        xL,
+        xR,
+        numqp,
+        numsplits = numsplits,
+    )
     n = levelset_normals(levelset, points(squad), invjac)
     t = rotate_90(n)
     s = scale_area(t, invjac)
@@ -211,7 +224,7 @@ function collect_interface_quadrature_points(
 )
     totalnumqps = sum([length(interfacequads[1, cellid]) for cellid in cellids])
     quadraturepoints = zeros(2, totalnumqps)
-    quadraturecellids = zeros(Int,totalnumqps)
+    quadraturecellids = zeros(Int, totalnumqps)
     start = 1
 
     for cellid in cellids
@@ -222,10 +235,10 @@ function collect_interface_quadrature_points(
         stop = start + numqps - 1
 
         quadraturepoints[:, start:stop] = qps
-        quadraturecellids[start:stop] = repeat([cellid],numqps)
+        quadraturecellids[start:stop] = repeat([cellid], numqps)
         start = stop + 1
     end
-    return quadraturepoints,quadraturecellids
+    return quadraturepoints, quadraturecellids
 end
 
 function collect_interface_quadrature_points(interfacequads, levelsetsign, mesh)
@@ -233,12 +246,12 @@ function collect_interface_quadrature_points(interfacequads, levelsetsign, mesh)
     ncells = number_of_cells(mesh)
     cellsign = [cell_sign(mesh, cellid) for cellid = 1:ncells]
     cellids = findall(cellsign .== 0)
-    qps,qpcellids = collect_interface_quadrature_points(
+    qps, qpcellids = collect_interface_quadrature_points(
         interfacequads,
         levelsetsign,
         mesh,
         cellids,
     )
 
-    return qps,qpcellids
+    return qps, qpcellids
 end

@@ -45,12 +45,16 @@ southwest = CutCellDG.cell_map_to_south_west()
 polyorder = 1
 numqp = 2
 
-basis = TensorProductBasis(2, polyorder)
+elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2,4)
 x0 = [0.0, 0.0]
 meshwidths = [2.0, 1.0]
 nelements = [2, 1]
-dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, basis)
-cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, basis)
+refpoints = interpolation_points(elasticitybasis)
+dim,nf = size(interpolation_points(levelsetbasis))
+dgmesh = CutCellDG.DGMesh(x0, meshwidths, nelements, refpoints)
+cgmesh = CutCellDG.CGMesh(x0, meshwidths, nelements, nf)
 
 
 normal = [1.0, 0.0]
@@ -58,7 +62,8 @@ xI = [1.1, 0.0]
 levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, normal, xI),
     cgmesh,
-    basis,
+    levelsetbasis,
+    quad
 )
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)

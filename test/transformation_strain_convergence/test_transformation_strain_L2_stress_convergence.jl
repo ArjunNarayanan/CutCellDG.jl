@@ -25,7 +25,12 @@ function compute_L2_stress_error(polyorder, nelmts, width)
     dx = width / nelmts
     penalty = penaltyfactor / dx * 0.5 * (lambda1 + mu1 + lambda2 + mu2)
 
-    basis = TensorProductBasis(2, polyorder)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
     interfacecenter = [0.5, 0.5]
     interfaceradius = minimum(meshwidth) / 3.0
     outerradius = 2.0
@@ -43,14 +48,14 @@ function compute_L2_stress_error(polyorder, nelmts, width)
     mesh, cellquads, facequads, interfacequads = construct_mesh_and_quadratures(
         meshwidth,
         nelmts,
-        basis,
+        elasticitybasis,
         interfacecenter,
         interfaceradius,
         numqp,
     )
     nodaldisplacement = nodal_displacement(
         mesh,
-        basis,
+        elasticitybasis,
         cellquads,
         facequads,
         interfacequads,
@@ -62,7 +67,7 @@ function compute_L2_stress_error(polyorder, nelmts, width)
 
     stresserror = stress_L2_error(
         nodaldisplacement,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         transfstress,

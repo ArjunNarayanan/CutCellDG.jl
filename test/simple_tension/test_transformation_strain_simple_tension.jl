@@ -27,26 +27,29 @@ function test_transformation_strain_simple_tension()
     polyorder = 1
     numqp = required_quadrature_order(polyorder) + 2
 
-    basis = TensorProductBasis(2, polyorder)
-    cgmesh = CutCellDG.CGMesh([0.0,0.0],[L,W],[nelmts,nelmts],basis)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
 
-    levelset = CutCellDG.LevelSet(x->ones(size(x)[2]),cgmesh,basis)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], nf)
+    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], refpoints)
+
+    levelset =
+        CutCellDG.LevelSet(x -> 1.0, cgmesh, levelsetbasis, quad)
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     sysmatrix = CutCellDG.SystemMatrix()
     sysrhs = CutCellDG.SystemRHS()
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         cutmesh,
@@ -54,13 +57,13 @@ function test_transformation_strain_simple_tension()
     CutCellDG.assemble_bulk_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         cellquads,
         cutmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -70,7 +73,7 @@ function test_transformation_strain_simple_tension()
     CutCellDG.assemble_interelement_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         cutmesh,
     )
@@ -79,7 +82,7 @@ function test_transformation_strain_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -90,7 +93,7 @@ function test_transformation_strain_simple_tension()
     CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         cutmesh,
         x -> x[1] ≈ 0.0,
@@ -101,7 +104,7 @@ function test_transformation_strain_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -112,7 +115,7 @@ function test_transformation_strain_simple_tension()
     CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         cutmesh,
         x -> x[2] ≈ 0.0,
@@ -123,7 +126,7 @@ function test_transformation_strain_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         cutmesh,
@@ -134,7 +137,7 @@ function test_transformation_strain_simple_tension()
     CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         cutmesh,
         x -> x[1] ≈ L,

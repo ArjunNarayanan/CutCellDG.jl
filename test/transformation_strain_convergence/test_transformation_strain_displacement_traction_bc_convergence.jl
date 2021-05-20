@@ -229,15 +229,25 @@ function displacement_error(
         theta0,
     )
 
-    basis = TensorProductBasis(2, polyorder)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [width, width], [nelmts, nelmts], basis)
-    cgmesh =
-        CutCellDG.CGMesh([0.0, 0.0], [width, width], [nelmts, nelmts], basis)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
+    mesh = CutCellDG.DGMesh(
+        [0.0, 0.0],
+        [width, width],
+        [nelmts, nelmts],
+        refpoints,
+    )
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [width, width], [nelmts, nelmts], nf)
 
     levelset = CutCellDG.LevelSet(
-        x -> -circle_distance_function(x, center, inradius),
+        x -> -circle_distance_function(x, center, inradius)[1],
         cgmesh,
-        basis,
+        levelsetbasis,
+        quad,
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
@@ -254,7 +264,7 @@ function displacement_error(
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
@@ -262,13 +272,13 @@ function displacement_error(
     CutCellDG.assemble_bulk_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -278,14 +288,14 @@ function displacement_error(
     CutCellDG.assemble_interelement_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
     )
 
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -295,7 +305,7 @@ function displacement_error(
     CutCellDG.assemble_coherent_interface_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         interfacequads,
         mergedmesh,
     )
@@ -304,7 +314,7 @@ function displacement_error(
         sysmatrix,
         sysrhs,
         analyticalsolution,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -314,7 +324,7 @@ function displacement_error(
     CutCellDG.assemble_penalty_displacement_transformation_linear_form!(
         sysrhs,
         transfstress,
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> ondisplacementboundary(x, L, W),
@@ -323,7 +333,7 @@ function displacement_error(
     CutCellDG.assemble_traction_force_linear_form!(
         sysrhs,
         x -> exact_stress(analyticalsolution, x)[[1, 3]],
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> ontractionboundary(x, L, W),
@@ -338,7 +348,7 @@ function displacement_error(
     err = mesh_L2_error(
         nodaldisplacement,
         analyticalsolution,
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )

@@ -12,9 +12,11 @@ struct CellQuadratures
 end
 
 function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
+    polyorder = order(levelset)
+    dim = dimension(mesh)
+    interpgrad = InterpolatingPolynomial(dim, dim, polyorder)
     numcells = number_of_cells(mesh)
-
-    tpq = tensor_product_quadrature(2, numuniformqp)
+    tpq = tensor_product_quadrature(dim, numuniformqp)
 
     quads = [tpq]
 
@@ -30,10 +32,12 @@ function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
         elseif s == 0
             nodeids = nodal_connectivity(background_mesh(mesh), cellid)
             load_coefficients!(levelset, cellid)
+            update_interpolating_gradient!(interpgrad, interpolater(levelset))
 
             try
                 pquad = area_quadrature(
                     interpolater(levelset),
+                    interpgrad,
                     +1,
                     xL,
                     xR,
@@ -45,6 +49,7 @@ function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
 
                 nquad = area_quadrature(
                     interpolater(levelset),
+                    interpgrad,
                     -1,
                     xL,
                     xR,
@@ -56,6 +61,7 @@ function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
             catch e
                 pquad = area_quadrature(
                     interpolater(levelset),
+                    interpgrad,
                     +1,
                     xL,
                     xR,
@@ -67,6 +73,7 @@ function CellQuadratures(mesh, levelset, numuniformqp, numcutqp)
 
                 nquad = area_quadrature(
                     interpolater(levelset),
+                    interpgrad,
                     -1,
                     xL,
                     xR,

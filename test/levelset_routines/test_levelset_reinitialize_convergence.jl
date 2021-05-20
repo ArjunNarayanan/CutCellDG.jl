@@ -8,11 +8,12 @@ include("../useful_routines.jl")
 
 function reinitialization_error(distancefunction, nelmts, polyorder)
     L, W = 1.0, 1.0
-    basis = TensorProductBasis(2, polyorder)
+    basis = LagrangeTensorProductBasis(2, polyorder)
+    dim,nf = size(interpolation_points(basis))
     numqp = required_quadrature_order(polyorder) + 4
     quad = tensor_product_quadrature(2, numqp)
 
-    mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+    mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], nf)
     dx = CutCellDG.element_size(mesh)
     levelset = CutCellDG.LevelSet(distancefunction, mesh, basis)
 

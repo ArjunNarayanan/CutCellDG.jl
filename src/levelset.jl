@@ -30,10 +30,10 @@ function Base.show(io::IO, levelset::LevelSet)
     p = order(levelset)
     numcoefficients = length(coefficients(levelset))
     dim = dimension(background_mesh(levelset))
-    interpolatertype = typeof(interpolater(levelset))
+    interpolatertype = typeof(basis(interpolater(levelset)))
     str =
         "LevelSet\n\tDimension : $dim\n\tOrder : $p" *
-        "\n\tInterpolater Type : interpolatertype"
+        "\n\tInterpolater Type : $interpolatertype"
     "\n\tTotal Num. Coefficients = $numcoefficients"
     print(io, str)
 end
@@ -85,8 +85,8 @@ end
 function coefficients(levelset::LevelSet, cellid)
     mesh = background_mesh(levelset)
     dofspernode = dofs_per_node(levelset)
-    nodeids = nodal_connectivity(mesh,cellid)
-    edofs = element_dofs(nodeids,dofspernode)
+    nodeids = nodal_connectivity(mesh, cellid)
+    edofs = element_dofs(nodeids, dofspernode)
     return coefficients(levelset)[edofs]
 end
 
@@ -110,7 +110,7 @@ function update_coefficients!(levelset::LevelSet, cellid, coeffs)
     mesh = background_mesh(levelset)
     nodeids = nodal_connectivity(mesh, cellid)
     dofspernode = dofs_per_node(levelset)
-    edofs = element_dofs(nodeids,dofspernode)
+    edofs = element_dofs(nodeids, dofspernode)
     levelset.coefficients[edofs] .= coeffs
 end
 

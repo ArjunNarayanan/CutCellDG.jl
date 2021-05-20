@@ -27,9 +27,15 @@ transfstress =
 
 polyorder = 1
 numqp = 2
-basis = TensorProductBasis(2, polyorder)
-dgmesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+
+elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2, 4)
+dim, nf = size(interpolation_points(levelsetbasis))
+refpoints = interpolation_points(elasticitybasis)
+
+dgmesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], refpoints)
+cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], nf)
 
 R = 0.51
 x0 = [R, 0.0]
@@ -37,7 +43,8 @@ normal = [1.0, 0.0]
 levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, normal, x0),
     cgmesh,
-    basis,
+    levelsetbasis,
+    quad,
 )
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
@@ -59,7 +66,7 @@ sysrhs = CutCellDG.SystemRHS()
 
 CutCellDG.assemble_displacement_bilinear_forms!(
     sysmatrix,
-    basis,
+    elasticitybasis,
     cellquads,
     stiffness,
     mergedmesh,
@@ -67,13 +74,13 @@ CutCellDG.assemble_displacement_bilinear_forms!(
 CutCellDG.assemble_bulk_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     cellquads,
     mergedmesh,
 )
 CutCellDG.assemble_interelement_condition!(
     sysmatrix,
-    basis,
+    elasticitybasis,
     facequads,
     stiffness,
     mergedmesh,
@@ -83,14 +90,14 @@ CutCellDG.assemble_interelement_condition!(
 CutCellDG.assemble_interelement_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     facequads,
     mergedmesh,
 )
 
 CutCellDG.assemble_incoherent_interface_condition!(
     sysmatrix,
-    basis,
+    elasticitybasis,
     interfacequads,
     stiffness,
     mergedmesh,
@@ -100,7 +107,7 @@ CutCellDG.assemble_incoherent_interface_condition!(
 CutCellDG.assemble_incoherent_interface_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     interfacequads,
     mergedmesh,
 )
@@ -109,7 +116,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     sysmatrix,
     sysrhs,
     x -> 0.0,
-    basis,
+    elasticitybasis,
     facequads,
     stiffness,
     mergedmesh,
@@ -120,7 +127,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
 CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     facequads,
     mergedmesh,
     x -> x[1] ≈ 0.0,
@@ -131,7 +138,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     sysmatrix,
     sysrhs,
     x -> 0.0,
-    basis,
+    elasticitybasis,
     facequads,
     stiffness,
     mergedmesh,
@@ -142,7 +149,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
 CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     facequads,
     mergedmesh,
     x -> x[2] ≈ 0.0,
@@ -153,7 +160,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
     sysmatrix,
     sysrhs,
     x -> 0.0,
-    basis,
+    elasticitybasis,
     facequads,
     stiffness,
     mergedmesh,
@@ -164,7 +171,7 @@ CutCellDG.assemble_penalty_displacement_component_bc!(
 CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
     sysrhs,
     transfstress,
-    basis,
+    elasticitybasis,
     facequads,
     mergedmesh,
     x -> x[1] ≈ L,
@@ -184,7 +191,7 @@ solver = APS.PlaneSolver(L, W, R, lambda1, mu1, lambda2, mu2, theta0)
 err = mesh_L2_error(
     disp,
     x -> APS.displacement_field(solver, x),
-    basis,
+    elasticitybasis,
     cellquads,
     mergedmesh,
 )

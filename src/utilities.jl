@@ -244,3 +244,8 @@ function hermite_dofs_per_node(dim)
     @assert dim == 2
     return 4
 end
+
+function hermite_interpolation_indices(dim)
+    @assert dim == 2
+    return [1,5,9,13]
+end

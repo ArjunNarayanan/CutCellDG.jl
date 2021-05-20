@@ -40,14 +40,21 @@ function error_for_plane_interface(
     alpha = 0.1
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
-    basis = TensorProductBasis(2, polyorder)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
+    cgmesh =
+        CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], nf)
+    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], refpoints)
 
     levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, normal, x0),
         cgmesh,
-        basis,
+        levelsetbasis,
+        quad,
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
@@ -63,14 +70,14 @@ function error_for_plane_interface(
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -79,7 +86,7 @@ function error_for_plane_interface(
     )
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -90,7 +97,7 @@ function error_for_plane_interface(
         sysmatrix,
         sysrhs,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -100,7 +107,7 @@ function error_for_plane_interface(
     CutCellDG.assemble_body_force!(
         sysrhs,
         x -> body_force(lambda, mu, alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )
@@ -114,7 +121,7 @@ function error_for_plane_interface(
     err = mesh_L2_error(
         nodaldisplacement,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )

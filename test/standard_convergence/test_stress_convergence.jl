@@ -22,13 +22,13 @@ function compute_stress_error(
     alpha = 0.1
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
-    basis = TensorProductBasis(2, polyorder)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 
-    mergedmesh, cellquads, facequads, interfacequads =
+    mergedmesh, cellquads, facequads, interfacequads, levelset =
         construct_mesh_and_quadratures(
             [L, W],
             nelmts,
-            basis,
+            elasticitybasis,
             distancefunc,
             numqp,
         )
@@ -38,14 +38,14 @@ function compute_stress_error(
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -54,7 +54,7 @@ function compute_stress_error(
     )
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -65,7 +65,7 @@ function compute_stress_error(
         sysmatrix,
         sysrhs,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -75,7 +75,7 @@ function compute_stress_error(
     CutCellDG.assemble_body_force!(
         sysrhs,
         x -> body_force(lambda, mu, alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )
@@ -87,7 +87,7 @@ function compute_stress_error(
 
     stresserr = stress_L2_error(
         nodaldisplacement,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
@@ -98,7 +98,7 @@ end
 
 function update_cell_stress_error!(
     err,
-    basis,
+    elasticitybasis,
     stiffness,
     celldisp,
     quad,
@@ -111,7 +111,7 @@ function update_cell_stress_error!(
 
     dim = length(vectosymmconverter)
     for (p, w) in quad
-        grad = CutCellDG.transform_gradient(gradient(basis, p), jac)
+        grad = CutCellDG.transform_gradient(gradient(elasticitybasis, p), jac)
         NK = sum([
             CutCellDG.make_row_matrix(vectosymmconverter[k], grad[:, k]) for
             k = 1:dim
@@ -127,7 +127,7 @@ end
 
 function stress_L2_error(
     nodaldisplacement,
-    basis,
+    elasticitybasis,
     cellquads,
     stiffness,
     mesh,
@@ -155,7 +155,7 @@ function stress_L2_error(
 
             update_cell_stress_error!(
                 err,
-                basis,
+                elasticitybasis,
                 stiffness[-1],
                 celldisp,
                 quad,
@@ -176,7 +176,7 @@ function stress_L2_error(
 
             update_cell_stress_error!(
                 err,
-                basis,
+                elasticitybasis,
                 stiffness[+1],
                 celldisp,
                 quad,
@@ -208,7 +208,7 @@ function test_stress_convergence_edge_intersecting_curved_interface()
                 x,
                 interface_center,
                 interface_radius,
-            ),
+            )[1],
             ne,
             polyorder,
             numqp,
@@ -237,7 +237,7 @@ function test_stress_convergence_circular_interface()
                 x,
                 interface_center,
                 interface_radius,
-            ),
+            )[1],
             ne,
             polyorder,
             numqp,

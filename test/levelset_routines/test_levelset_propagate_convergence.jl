@@ -114,9 +114,10 @@ function error_for_nelmts(nelmts)
     speed = -1.0
     stoptime = 0.25
 
-    basis = TensorProductBasis(2, polyorder)
+    basis = LagrangeTensorProductBasis(2, polyorder)
+    dim,nf = size(interpolation_points(basis))
     quad = tensor_product_quadrature(2, numqp)
-    mesh = CutCellDG.CGMesh(x0, [L, W], [nelmts, nelmts], basis)
+    mesh = CutCellDG.CGMesh(x0, [L, W], [nelmts, nelmts], nf)
     paddedmesh = CutCellDG.BoundaryPaddedMesh(mesh, 1)
     numnodes = CutCellDG.number_of_nodes(mesh)
     dx = minimum(CutCellDG.grid_size(paddedmesh))

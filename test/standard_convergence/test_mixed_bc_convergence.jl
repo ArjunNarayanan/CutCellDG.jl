@@ -23,14 +23,14 @@ function error_for_curved_interface(
     alpha = 0.1
     stiffness = CutCellDG.HookeStiffness(lambda, mu, lambda, mu)
 
-    basis = TensorProductBasis(2, polyorder)
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 
-    mergedmesh, cellquads, facequads, interfacequads =
+    mergedmesh, cellquads, facequads, interfacequads, levelset =
         construct_mesh_and_quadratures(
             [L, W],
             nelmts,
-            basis,
-            x -> circle_distance_function(x, xc, radius),
+            elasticitybasis,
+            x -> circle_distance_function(x, xc, radius)[1],
             numqp,
         )
 
@@ -39,14 +39,14 @@ function error_for_curved_interface(
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
     )
     CutCellDG.assemble_interelement_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -55,7 +55,7 @@ function error_for_curved_interface(
     )
     CutCellDG.assemble_coherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -65,7 +65,7 @@ function error_for_curved_interface(
     CutCellDG.assemble_body_force!(
         sysrhs,
         x -> body_force(lambda, mu, alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )
@@ -74,7 +74,7 @@ function error_for_curved_interface(
         sysmatrix,
         sysrhs,
         x -> displacement(alpha, x)[2],
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -85,7 +85,7 @@ function error_for_curved_interface(
     CutCellDG.assemble_traction_force_component_linear_form!(
         sysrhs,
         x -> -stress_field(lambda, mu, alpha, x)[3],
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> onbottomboundary(x, L, W),
@@ -96,7 +96,7 @@ function error_for_curved_interface(
         sysmatrix,
         sysrhs,
         x -> displacement(alpha, x)[1],
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -107,7 +107,7 @@ function error_for_curved_interface(
     CutCellDG.assemble_traction_force_component_linear_form!(
         sysrhs,
         x -> -stress_field(lambda, mu, alpha, x)[3],
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> onleftboundary(x, L, W),
@@ -117,7 +117,7 @@ function error_for_curved_interface(
     CutCellDG.assemble_traction_force_linear_form!(
         sysrhs,
         x -> stress_field(lambda, mu, alpha, x)[[1, 3]],
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> onrightboundary(x, L, W),
@@ -125,7 +125,7 @@ function error_for_curved_interface(
     CutCellDG.assemble_traction_force_linear_form!(
         sysrhs,
         x -> stress_field(lambda, mu, alpha, x)[[3, 2]],
-        basis,
+        elasticitybasis,
         facequads,
         mergedmesh,
         x -> ontopboundary(x, L, W),
@@ -140,7 +140,7 @@ function error_for_curved_interface(
     err = mesh_L2_error(
         nodaldisplacement,
         x -> displacement(alpha, x),
-        basis,
+        elasticitybasis,
         cellquads,
         mergedmesh,
     )

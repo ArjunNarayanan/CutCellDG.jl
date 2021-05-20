@@ -23,25 +23,29 @@ function test_incoherent_interface_simple_tension()
     stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
     polyorder = 1
     numqp = 2
-    basis = TensorProductBasis(2, polyorder)
-    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
-    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], basis)
+
+    elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+    levelsetbasis = HermiteTensorProductBasis(2)
+    quad = tensor_product_quadrature(2, 4)
+    dim, nf = size(interpolation_points(levelsetbasis))
+    refpoints = interpolation_points(elasticitybasis)
+
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], nf)
+    mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], refpoints)
 
     x0 = [0.5, 0.0]
     normal = [1.0, 0.0]
     levelset = CutCellDG.LevelSet(
         x -> plane_distance_function(x, normal, x0),
         cgmesh,
-        basis,
+        levelsetbasis,
+        quad,
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
-    cellquads =
-        CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
-    interfacequads =
-        CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
-    facequads =
-        CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
+    cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)
+    interfacequads = CutCellDG.InterfaceQuadratures(cutmesh, levelset, numqp)
+    facequads = CutCellDG.FaceQuadratures(cutmesh, levelset, numqp)
 
     mergedmesh = cutmesh
 
@@ -56,14 +60,14 @@ function test_incoherent_interface_simple_tension()
 
     CutCellDG.assemble_displacement_bilinear_forms!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         cellquads,
         stiffness,
         mergedmesh,
     )
     CutCellDG.assemble_incoherent_interface_condition!(
         sysmatrix,
-        basis,
+        elasticitybasis,
         interfacequads,
         stiffness,
         mergedmesh,
@@ -74,7 +78,7 @@ function test_incoherent_interface_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -86,7 +90,7 @@ function test_incoherent_interface_simple_tension()
         sysmatrix,
         sysrhs,
         x -> 0.0,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
@@ -98,7 +102,7 @@ function test_incoherent_interface_simple_tension()
         sysmatrix,
         sysrhs,
         x -> applydisplacement,
-        basis,
+        elasticitybasis,
         facequads,
         stiffness,
         mergedmesh,
