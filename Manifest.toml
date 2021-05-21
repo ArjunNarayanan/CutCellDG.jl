@@ -16,7 +16,9 @@ uuid = "96374032-68de-5a5b-8d9e-752f78720389"
 version = "0.8.0"
 
 [[CartesianMesh]]
-path = "C:\\Users\\arjun\\.julia\\dev\\CartesianMesh"
+git-tree-sha1 = "dad6bda7c30f9936a902f63f315c161e574c6983"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/CartesianMesh.jl.git"
 uuid = "c3f3b8a2-2e3b-4b62-84bb-76319e98af94"
 version = "0.1.0"
 
@@ -104,7 +106,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[ImplicitDomainQuadrature]]
 deps = ["FastGaussQuadrature", "IntervalArithmetic", "LinearAlgebra", "PolynomialBasis", "Roots"]
-path = "C:\\Users\\arjun\\.julia\\dev\\ImplicitDomainQuadrature"
+git-tree-sha1 = "bfe5c73074bd5232a042434132bdebc2722602b8"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/ImplicitDomainQuadrature.git"
 uuid = "215a9a07-c97b-423e-a99e-05c6f7357eae"
 version = "0.1.0"
 
@@ -208,7 +212,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PolynomialBasis]]
 deps = ["DynamicPolynomials", "LinearAlgebra", "StaticPolynomials"]
-path = "C:\\Users\\arjun\\.julia\\dev\\PolynomialBasis"
+git-tree-sha1 = "8db517e079f69e9340ec4f1cda66878ed083f76d"
+repo-rev = "master"
+repo-url = "https://github.com/ArjunNarayanan/PolynomialBasis.jl.git"
 uuid = "776a168a-1973-4f1d-bada-3c06b642fffd"
 version = "0.1.0"
 
@@ -275,9 +281,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
-git-tree-sha1 = "9146da51b38e9705b9f5ccfadc3ab10a482cae36"
+git-tree-sha1 = "c467f25b6ec4167ea3a9a4351c66c2e1cba5da33"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.4.0"
+version = "1.4.1"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
