@@ -66,7 +66,7 @@ testcoeffs1 = [-1+perturbation   -1+perturbation   perturbation   perturbation
                 0.0               0.0              0.0            0.0
                 jac[1]            jac[1]           jac[1]         jac[1]
                 0.0               0.0              0.0            0.0]
-@test allapprox(coeffs1,testcoeffs1,1e3eps())
+@test allapprox(coeffs1,testcoeffs1,1e4eps())
 coeffs2 = reshape(CutCellDG.coefficients(levelset,2),4,:)
 testcoeffs2 = [perturbation    perturbation   1.0            1.0
                0.0             0.0            0.0            0.0

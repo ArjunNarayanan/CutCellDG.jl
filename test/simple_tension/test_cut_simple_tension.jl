@@ -126,7 +126,7 @@ function test_cut_simple_tension()
     testdisp[1, :] .*= e11
     testdisp[2, :] .*= e22
 
-    @test allapprox(disp, testdisp, 1e2eps())
+    @test allapprox(disp, testdisp, 1e3eps())
 end
 
 test_cut_simple_tension()

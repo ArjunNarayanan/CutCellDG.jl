@@ -129,5 +129,5 @@ productclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
     mergedmesh,
 )
 
-@test allapprox(parentclosestrefpoints, [1.1, 0.0], 1e2eps())
-@test allapprox(productclosestrefpoints, [-0.9, 0.0], 1e2eps())
+@test allapprox(parentclosestrefpoints, [1.1, 0.0], 1e3eps())
+@test allapprox(productclosestrefpoints, [-0.9, 0.0], 1e3eps())

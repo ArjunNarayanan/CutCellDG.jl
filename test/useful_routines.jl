@@ -6,6 +6,10 @@ function allapprox(v1, v2)
 end
 
 function allapprox(v1, v2, atol)
+    err = maximum(abs.(v1 - v2))
+    # if 10err > atol
+    #     @warn "Approximation is very tight!"
+    # end
     return length(v1) == length(v2) &&
            all([isapprox(v1[i], v2[i], atol = atol) for i = 1:length(v1)])
 end

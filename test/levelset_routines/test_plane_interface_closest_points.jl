@@ -165,7 +165,7 @@ hf = CutCellDG.saye_newton_hessian(l0, ∇p0, ∇2p0)
 
 x1, l1 = CutCellDG.step_saye_newton_iterate(x0, l0, gf, hf, 2.0)
 testcp = [0.75, 0.0]
-@test allapprox(x1, testcp, 1e2eps())
+@test allapprox(x1, testcp, 1e3eps())
 
 X1 = CutCellDG.inverse(cellmap, x1)
 p1 = func(X1)
@@ -175,7 +175,7 @@ gf = CutCellDG.saye_newton_gradient(x1, l1, xq, p1, ∇p1)
 hf = CutCellDG.saye_newton_hessian(l1, ∇p1, ∇2p1)
 
 x2, l2 = CutCellDG.step_saye_newton_iterate(x1, l1, gf, hf, 2.0)
-@test allapprox(x2, testcp, 1e3eps())
+@test allapprox(x2, testcp, 1e4eps())
 ################################################################################
 
 
@@ -188,7 +188,7 @@ p0 = func(X0)
 ∇2p0 = hess(X0)
 
 x1, l1 = CutCellDG.step_chopp_iterate(x0, xq, p0, ∇p0, 0.5)
-@test allapprox(x1, testcp, 1e3eps())
+@test allapprox(x1, testcp, 1e4eps())
 
 X1 = CutCellDG.inverse(cellmap, x1)
 p1 = func(X1)
@@ -196,7 +196,7 @@ p1 = func(X1)
 ∇2p0 = hess(X1)
 
 x2, l2 = CutCellDG.step_chopp_iterate(x1, xq, p1, ∇p1, 0.5)
-@test allapprox(x2, testcp, 1e3eps())
+@test allapprox(x2, testcp, 1e4eps())
 ################################################################################
 
 
@@ -212,7 +212,7 @@ x1, flag = CutCellDG.spatial_closest_point(
     20,
     1e4eps(),
 )
-@test allapprox(x1, testcp, 1e3eps())
+@test allapprox(x1, testcp, 1e4eps())
 @test flag
 ################################################################################
 
