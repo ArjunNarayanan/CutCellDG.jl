@@ -16,7 +16,7 @@ end
 
 perturbed_distancefunction(x, initialposition, frequency, amplitude) =
     plane_distance_function(x, [1.0, 0.0], [initialposition, 0.0]) +
-    perturbation(x[2, :], frequency, amplitude)
+    perturbation(x[2], frequency, amplitude)
 
 function plot_potential_components(
     ycoords,
@@ -104,9 +104,9 @@ querypoints = vcat(
 )
 ycoords = querypoints[2, :]
 
-polyorder = 2
+polyorder = 3
 nelmts = 33
-penaltyfactor = 1e1
+penaltyfactor = 1e2
 
 
 meshwidth = [1.0, 1.0]
@@ -129,12 +129,15 @@ theta0 = -0.067
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
-solverbasis = LagrangeTensorProductBasis(2, polyorder)
-basispts = interpolation_points(solverbasis)
-dim, numpts = size(basispts)
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2, 4)
+elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+dim, numpts = size(interpolation_points(levelsetbasis))
+basispts = interpolation_points(elasticitybasis)
+
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
-levelset = CutCellDG.LevelSet(distancefunction, cgmesh, solverbasis)
+levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
 
 elementsize = CutCellDG.element_size(cgmesh)
 minelmtsize = minimum(elementsize)
@@ -153,7 +156,7 @@ mesh, cellquads, facequads, interfacequads =
 
 nodaldisplacement = TES.nodal_displacement(
     mesh,
-    solverbasis,
+    elasticitybasis,
     cellquads,
     facequads,
     interfacequads,
@@ -194,7 +197,7 @@ productclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
 ################################################################################
 parentstrain = CutCellDG.parent_strain(
     nodaldisplacement,
-    solverbasis,
+    elasticitybasis,
     parentclosestrefpoints,
     closestcellids,
     mesh,
@@ -216,7 +219,7 @@ parentcompwork = V02 * (1.0 .+ parentdilatation) .* parentsrr
 ################################################################################
 productstrain = CutCellDG.product_elastic_strain(
     nodaldisplacement,
-    solverbasis,
+    elasticitybasis,
     theta0,
     productclosestrefpoints,
     closestcellids,
@@ -232,9 +235,8 @@ productdilatation = CutCellDG.dilatation(productstrain)
 productcompwork = V01 * (1.0 .+ productdilatation) .* productsrr
 ################################################################################
 
-srrmean = 0.5*(parentsrr + productsrr)
+srrmean = 0.5 * (parentsrr + productsrr)
 
-# NOTES: COMPUTE STRAIN ENERGY JUMP AND COMP WORK JUMP
 jse = productstrainenergy - parentstrainenergy
 jsediff = (maximum(jse) - minimum(jse)) / 2
 
@@ -247,15 +249,12 @@ jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
 pd = jse - jcw
 pddiff = (maximum(pd) - minimum(pd)) / 2
 
-foldername = "examples\\time-step\\perturbed-plane-interface\\lagrange-levelset\\potential-components"
-
-
+foldername = "examples\\time-step\\perturbed-plane-interface\\hermite-levelset\\potential-components"
+# interfacescale = 5
 ################################################################################
 
 
-interfacescale = 5
-
-pdscale = 3e-6
+pdscale = 4e-6
 plot_potential_components(
     ycoords,
     pd,
@@ -265,6 +264,25 @@ plot_potential_components(
     interfacescale,
     pdscale,
 )
+
+
+
+# Error in [σnn]
+# srrerr = productsrr - parentsrr
+# srrerrdiff = (maximum(srrerr) - minimum(srrerr))/2
+# pdscale = 0.03
+# plot_potential_components(
+#     ycoords,
+#     srrerr,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale
+# )
+
+
+
 
 
 # pdscale = 8e-6
@@ -292,16 +310,16 @@ plot_potential_components(
 #     ylabel = "Jump in compression work",
 #     # filepath = foldername * "\\compression-work-jump.png",
 # )
-
+#
 # plot_dilatation_and_normal_stress(
 #     ycoords,
 #     parentdilatation,
 #     productdilatation,
 #     parentsrr,
 #     productsrr,
-#     filepath = foldername * "\\dilatation-and-normal-stress.png",
+#     # filepath = foldername * "\\dilatation-and-normal-stress.png",
 # )
-#
+
 # parentsrrdiff = (maximum(parentsrr) - minimum(parentsrr)) / 2
 # yscale = 0.3
 # plot_potential_components(
@@ -314,9 +332,7 @@ plot_potential_components(
 #     yscale,
 #     ylabel = L"\mathrm{Parent} \ \sigma_{nn}",
 # )
-#
-#
-#
+
 # productsrrdiff = (maximum(productsrr) - minimum(productsrr)) / 2
 # yscale = 0.3
 # plot_potential_components(
@@ -329,23 +345,3 @@ plot_potential_components(
 #     yscale,
 #     ylabel = L"\mathrm{Product} \ \sigma_{nn}",
 # )
-
-
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,pd)
-# ax.grid()
-# fig
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,jse-jcw)
-# ax.grid()
-# fig
-
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,jse,label="se")
-# ax.plot(ycoords,jcw,label="cw")
-# ax.grid()
-# ax.legend()
-# fig

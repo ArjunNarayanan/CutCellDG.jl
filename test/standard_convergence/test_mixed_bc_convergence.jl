@@ -211,6 +211,7 @@ function test_mixed_bc_circular_interface()
     u1rate = convergence_rate(dx, u1err)
     u2rate = convergence_rate(dx, u2err)
 
+    return u1rate, u2rate
     @test all(u1rate .> 3.95)
     @test all(u2rate .> 3.95)
 end

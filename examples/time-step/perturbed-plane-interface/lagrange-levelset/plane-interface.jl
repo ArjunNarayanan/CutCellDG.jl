@@ -4,8 +4,8 @@ using PolynomialBasis
 using ImplicitDomainQuadrature
 using Revise
 using CutCellDG
-include("../../../test/useful_routines.jl")
-include("transformation-elasticity-solver.jl")
+include("../../../../test/useful_routines.jl")
+include("../transformation-elasticity-solver.jl")
 include("analytical-solver.jl")
 TES = TransformationElasticitySolver
 APS = AnalyticalPlaneSolver
@@ -39,10 +39,12 @@ function interface_potential(
     transfstress =
         CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
-    basis = TensorProductBasis(2, polyorder)
-    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-    dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basis)
-    levelset = CutCellDG.LevelSet(distancefunction, cgmesh, basis)
+    solverbasis = TensorProductBasis(2, polyorder)
+    basispoints = interpolation_points(solverbasis)
+    dim,numpts = size(basispoints)
+    cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
+    dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispoints)
+    levelset = CutCellDG.LevelSet(distancefunction, cgmesh, solverbasis)
 
     elementsize = CutCellDG.element_size(cgmesh)
     minelmtsize = minimum(elementsize)
@@ -61,7 +63,7 @@ function interface_potential(
     # pd = TES.potential_difference_at_query_points(
     #     querypoints,
     #     cutmesh,
-    #     basis,
+    #     solverbasis,
     #     levelset,
     #     stiffness,
     #     theta0,
@@ -78,7 +80,7 @@ function interface_potential(
     pd = TES.overpotential_difference_at_query_points(
         querypoints,
         cutmesh,
-        basis,
+        solverbasis,
         levelset,
         stiffness,
         theta0,
@@ -166,33 +168,33 @@ querypoints = vcat(
 )
 ycoords = querypoints[2, :]
 
-polyorder = 2
-nelmts = 33
-penaltyfactor = 1e1
-pd = interface_potential(
-    querypoints,
-    x -> distancefunction(x, initialposition, frequency, amplitude),
-    nelmts,
-    polyorder,
-    penaltyfactor,
-)
-
-
-pdnoise = (maximum(pd) - minimum(pd)) / abs(mean(pd))
-pddiff = (maximum(pd) - minimum(pd)) / 2
-println("PD Noise = $pdnoise")
-
-interfacescale = 5
-pdscale = 1e-8
-plot_interface_and_potential(
-    ycoords,
-    pd,
-    initialposition,
-    frequency,
-    amplitude,
-    interfacescale,
-    pdscale,
-)
+# polyorder = 2
+# nelmts = 33
+# penaltyfactor = 1e1
+# pd = interface_potential(
+#     querypoints,
+#     x -> distancefunction(x, initialposition, frequency, amplitude),
+#     nelmts,
+#     polyorder,
+#     penaltyfactor,
+# )
+#
+#
+# pdnoise = (maximum(pd) - minimum(pd)) / abs(mean(pd))
+# pddiff = (maximum(pd) - minimum(pd)) / 2
+# println("PD Noise = $pdnoise")
+#
+# interfacescale = 5
+# pdscale = 1e-8
+# plot_interface_and_potential(
+#     ycoords,
+#     pd,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale,
+# )
 
 
 
