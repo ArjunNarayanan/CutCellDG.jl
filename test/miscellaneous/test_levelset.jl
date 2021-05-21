@@ -62,4 +62,4 @@ spatialtestp = cellmap(testp)
 
 vals = vec(mapslices(levelset,testp,dims=1))
 testvals = vec(mapslices(testcubic,spatialtestp,dims=1))
-@test allapprox(vals,testvals,1e3eps())
+@test allapprox(vals,testvals,1e4eps())
