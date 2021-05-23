@@ -130,15 +130,13 @@ function construct_merged_mesh_and_quadratures(
     return mergedmesh, cellquads, facequads, interfacequads
 end
 
-function parent_potential(
+function parent_stress_strain(
     nodaldisplacement,
     basis,
     refpoints,
     refcellids,
-    normals,
     mesh,
     stiffness,
-    V0,
 )
     parentstrain = CutCellDG.parent_strain(
         nodaldisplacement,
@@ -148,30 +146,28 @@ function parent_potential(
         mesh,
     )
     parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
-    parentstrainenergy =
-        V0 * CutCellDG.strain_energy(parentstress, parentstrain)
-
-    parentradialtraction =
-        CutCellDG.traction_force_at_points(parentstress, normals)
-    parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
-    parentdilatation = CutCellDG.dilatation(parentstrain)
-
-    parentcompwork = V0 * (1.0 .+ parentdilatation) .* parentsrr
-
-    parentpotential = parentstrainenergy - parentcompwork
-    return parentpotential
+    # parentstrainenergy =
+    #     V0 * CutCellDG.strain_energy(parentstress, parentstrain)
+    #
+    # parentradialtraction =
+    #     CutCellDG.traction_force_at_points(parentstress, normals)
+    # parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
+    # parentdilatation = CutCellDG.dilatation(parentstrain)
+    #
+    # parentcompwork = V0 * (1.0 .+ parentdilatation) .* parentsrr
+    #
+    # parentpotential = parentstrainenergy - parentcompwork
+    return parentstress, parentstrain
 end
 
-function product_potential(
+function product_stress_strain(
     nodaldisplacement,
     basis,
     refpoints,
     refcellids,
-    normals,
     mesh,
     stiffness,
     theta0,
-    V0,
 )
 
     productstrain = CutCellDG.product_elastic_strain(
@@ -183,17 +179,18 @@ function product_potential(
         mesh,
     )
     productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
-    productstrainenergy =
-        V0 * CutCellDG.strain_energy(productstress, productstrain)
-    productradialtraction =
-        CutCellDG.traction_force_at_points(productstress, normals)
-    productsrr = CutCellDG.traction_component(productradialtraction, normals)
-    productdilatation = CutCellDG.dilatation(productstrain)
-    productcompwork = V0 * (1.0 .+ productdilatation) .* productsrr
 
-    productpotential = productstrainenergy - productcompwork
+    # productstrainenergy =
+    #     V0 * CutCellDG.strain_energy(productstress, productstrain)
+    # productradialtraction =
+    #     CutCellDG.traction_force_at_points(productstress, normals)
+    # productsrr = CutCellDG.traction_component(productradialtraction, normals)
+    # productdilatation = CutCellDG.dilatation(productstrain)
+    # productcompwork = V0 * (1.0 .+ productdilatation) .* productsrr
+    #
+    # productpotential = productstrainenergy - productcompwork
 
-    return productpotential
+    return productstress, productstrain
 end
 
 function potential_difference_at_closest_points(
@@ -240,29 +237,71 @@ function potential_difference_at_closest_points(
         mesh,
     )
 
-    parentpotential = parent_potential(
+    # parentpotential = parent_potential(
+    #     nodaldisplacement,
+    #     basis,
+    #     parentclosestrefpoints,
+    #     closestcellids,
+    #     normals,
+    #     mesh,
+    #     stiffness,
+    #     V02,
+    # )
+    parentstress, parentstrain = parent_stress_strain(
         nodaldisplacement,
         basis,
         parentclosestrefpoints,
         closestcellids,
-        normals,
         mesh,
         stiffness,
-        V02,
     )
-    productpotential = product_potential(
+    # productpotential = product_potential(
+    #     nodaldisplacement,
+    #     basis,
+    #     productclosestrefpoints,
+    #     closestcellids,
+    #     normals,
+    #     mesh,
+    #     stiffness,
+    #     theta0,
+    #     V01,
+    # )
+    productstress, productstrain = product_stress_strain(
         nodaldisplacement,
         basis,
         productclosestrefpoints,
         closestcellids,
-        normals,
         mesh,
         stiffness,
         theta0,
-        V01,
     )
 
-    return productpotential - parentpotential
+    parentstrainenergy =
+        V02 * CutCellDG.strain_energy(parentstress, parentstrain)
+    parentradialtraction =
+        CutCellDG.traction_force_at_points(parentstress, normals)
+    parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
+    parentdilatation = CutCellDG.dilatation(parentstrain)
+
+    productstrainenergy =
+        V01 * CutCellDG.strain_energy(productstress, productstrain)
+    productradialtraction =
+        CutCellDG.traction_force_at_points(productstress, normals)
+    productsrr = CutCellDG.traction_component(productradialtraction, normals)
+    productdilatation = CutCellDG.dilatation(productstrain)
+
+    meansrr = 0.5 * (parentsrr + productsrr)
+    parentsrr = productsrr = meansrr
+
+    strainenergyjump = productstrainenergy - parentstrainenergy
+    compworkjump = (
+        V01 * (1.0 .+ productdilatation) .* productsrr -
+        V02 * (1.0 .+ parentdilatation) .* parentsrr
+    )
+
+    pd = strainenergyjump - compworkjump
+
+    return pd
 end
 
 function average(v)
