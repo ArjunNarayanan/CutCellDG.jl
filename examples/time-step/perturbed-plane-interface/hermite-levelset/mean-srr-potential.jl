@@ -6,12 +6,11 @@ using Revise
 using CutCellDG
 include("../../../../test/useful_routines.jl")
 include("../transformation-elasticity-solver.jl")
-# include("analytical-solver.jl")
 TES = TransformationElasticitySolver
-# APS = AnalyticalPlaneSolver
+
 
 function perturbation(x, frequency, amplitude)
-    return amplitude * sin.(2 * pi * frequency * x)
+    return amplitude * cos.(2 * pi * frequency * x)
 end
 
 perturbed_distancefunction(x, initialposition, frequency, amplitude) =
@@ -90,25 +89,16 @@ function plot_dilatation_and_normal_stress(
     end
 end
 
-initialposition = 0.5
-frequency = 2.5
-amplitude = 1e-3
-# amplitude = 0.0
 distancefunction(x) =
     perturbed_distancefunction(x, initialposition, frequency, amplitude)
 
-numquerypoints = 1000
-querypoints = vcat(
-    repeat([initialposition], numquerypoints)',
-    range(0, 1, length = numquerypoints)',
-)
-ycoords = querypoints[2, :]
-
-polyorder = 3
-nelmts = 33
-penaltyfactor = 1e2
-
-
+initialposition = 0.5
+frequency = 2.0
+amplitude = 1e-2
+# amplitude = 1e-10
+polyorder = 2
+nelmts = 17
+penaltyfactor = 1e3
 meshwidth = [1.0, 1.0]
 numqp = required_quadrature_order(polyorder) + 2
 
@@ -126,6 +116,17 @@ V02 = 1.0 / rho2
 molarmass = 0.147
 ΔG0 = ΔG0Jmol / molarmass
 theta0 = -0.067
+
+
+
+
+numquerypoints = 1000
+querypoints = vcat(
+    repeat([initialposition], numquerypoints)',
+    range(0, 1, length = numquerypoints)',
+)
+ycoords = querypoints[2, :]
+
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
@@ -137,6 +138,8 @@ basispts = interpolation_points(elasticitybasis)
 
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
+# CutCellDG.make_vertical_periodic!(dgmesh)
+
 levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
 
 elementsize = CutCellDG.element_size(cgmesh)
@@ -250,11 +253,11 @@ pd = jse - jcw
 pddiff = (maximum(pd) - minimum(pd)) / 2
 
 foldername = "examples\\time-step\\perturbed-plane-interface\\hermite-levelset\\potential-components"
-# interfacescale = 5
+interfacescale = 5
 ################################################################################
 
 
-pdscale = 4e-6
+pdscale = 1.5pddiff
 plot_potential_components(
     ycoords,
     pd,

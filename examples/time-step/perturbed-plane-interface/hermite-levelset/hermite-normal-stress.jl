@@ -16,7 +16,7 @@ end
 
 perturbed_distancefunction(x, initialposition, frequency, amplitude) =
     plane_distance_function(x, [1.0, 0.0], [initialposition, 0.0]) +
-    perturbation(x[2, :], frequency, amplitude)
+    perturbation(x[2], frequency, amplitude)
 
 function plot_potential_components(
     ycoords,
@@ -90,25 +90,36 @@ function plot_dilatation_and_normal_stress(
     end
 end
 
-initialposition = 0.5
-frequency = 2.5
-amplitude = 1e-3
-# amplitude = 0.0
+function plot_normal_stress(ycoords, parentsrr, productsrr; filepath = "")
+
+    fig, ax = PyPlot.subplots()
+    ax.plot(ycoords, parentsrr, label = "parent")
+    ax.plot(ycoords, productsrr, label = "product")
+    ax.grid()
+    ax.set_ylabel(L"\sigma_{nn}")
+    ax.set_xlabel("y")
+    ax.legend()
+
+    if length(filepath) > 0
+        fig.savefig(filepath)
+        return fig
+    else
+        return fig
+    end
+end
+
+
 distancefunction(x) =
     perturbed_distancefunction(x, initialposition, frequency, amplitude)
 
-numquerypoints = 1000
-querypoints = vcat(
-    repeat([initialposition], numquerypoints)',
-    range(0, 1, length = numquerypoints)',
-)
-ycoords = querypoints[2, :]
 
+initialposition = 0.5
+frequency = 2.5
+amplitude = 1e-2
+# amplitude = 1e-10
 polyorder = 2
-nelmts = 33
-penaltyfactor = 1e1
-
-
+nelmts = 17
+penaltyfactor = 1e3
 meshwidth = [1.0, 1.0]
 numqp = required_quadrature_order(polyorder) + 2
 
@@ -126,15 +137,31 @@ V02 = 1.0 / rho2
 molarmass = 0.147
 ΔG0 = ΔG0Jmol / molarmass
 theta0 = -0.067
+
+
+
+
+numquerypoints = 1000
+querypoints = vcat(
+    repeat([initialposition], numquerypoints)',
+    range(0, 1, length = numquerypoints)',
+)
+ycoords = querypoints[2, :]
+
+
+
+
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
+levelsetbasis = HermiteTensorProductBasis(2)
+quad = tensor_product_quadrature(2, 4)
 solverbasis = LagrangeTensorProductBasis(2, polyorder)
 basispts = interpolation_points(solverbasis)
-dim, numpts = size(basispts)
+dim, numpts = size(interpolation_points(levelsetbasis))
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
-levelset = CutCellDG.LevelSet(distancefunction, cgmesh, solverbasis)
+levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
 
 elementsize = CutCellDG.element_size(cgmesh)
 minelmtsize = minimum(elementsize)
@@ -232,16 +259,16 @@ productdilatation = CutCellDG.dilatation(productstrain)
 productcompwork = V01 * (1.0 .+ productdilatation) .* productsrr
 ################################################################################
 
-srrmean = 0.5*(parentsrr + productsrr)
+srrmean = 0.5 * (parentsrr + productsrr)
 
 # NOTES: COMPUTE STRAIN ENERGY JUMP AND COMP WORK JUMP
 jse = productstrainenergy - parentstrainenergy
 jsediff = (maximum(jse) - minimum(jse)) / 2
 
-# jcw = productcompwork - parentcompwork
-jcw =
-    (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
-    srrmean
+jcw = productcompwork - parentcompwork
+# jcw =
+#     (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
+#     srrmean
 jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
 
 pd = jse - jcw
@@ -253,18 +280,21 @@ foldername = "examples\\time-step\\perturbed-plane-interface\\lagrange-levelset\
 ################################################################################
 
 
-interfacescale = 5
+plot_normal_stress(ycoords, parentsrr, productsrr)
 
-pdscale = 3e-6
-plot_potential_components(
-    ycoords,
-    pd,
-    initialposition,
-    frequency,
-    amplitude,
-    interfacescale,
-    pdscale,
-)
+
+
+# interfacescale = 5
+# pdscale = 3e-6
+# plot_potential_components(
+#     ycoords,
+#     pd,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale,
+# )
 
 
 # pdscale = 8e-6
@@ -329,23 +359,3 @@ plot_potential_components(
 #     yscale,
 #     ylabel = L"\mathrm{Product} \ \sigma_{nn}",
 # )
-
-
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,pd)
-# ax.grid()
-# fig
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,jse-jcw)
-# ax.grid()
-# fig
-
-
-# fig,ax = PyPlot.subplots()
-# ax.plot(ycoords,jse,label="se")
-# ax.plot(ycoords,jcw,label="cw")
-# ax.grid()
-# ax.legend()
-# fig

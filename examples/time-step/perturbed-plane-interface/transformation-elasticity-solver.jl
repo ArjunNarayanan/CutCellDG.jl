@@ -101,7 +101,7 @@ function nodal_displacement(
         basis,
         facequads,
         mesh,
-        x -> x[1] ≈ 0.0,
+        x -> x[1] ≈ x0[1],
         [1.0, 0.0],
     )
 

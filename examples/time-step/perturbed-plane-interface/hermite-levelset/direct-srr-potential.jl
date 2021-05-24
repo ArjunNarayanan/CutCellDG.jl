@@ -6,8 +6,8 @@ using Revise
 using CutCellDG
 include("../../../../test/useful_routines.jl")
 include("../transformation-elasticity-solver.jl")
-
 TES = TransformationElasticitySolver
+
 
 function perturbation(x, frequency, amplitude)
     return amplitude * sin.(2 * pi * frequency * x)
@@ -15,35 +15,41 @@ end
 
 perturbed_distancefunction(x, initialposition, frequency, amplitude) =
     plane_distance_function(x, [1.0, 0.0], [initialposition, 0.0]) +
-    perturbation(x[2, :], frequency, amplitude)
+    perturbation(x[2], frequency, amplitude)
 
-function perturbed_normal(y, frequency, amplitude)
-    ny = 2pi * amplitude * frequency * cos.(2pi * frequency * y)
-    magnitude = sqrt.(1.0 .+ ny .^ 2)
-    numpts = length(y)
-    nx = 1.0 ./ magnitude
-    ny = ny ./ magnitude
-    normals = vcat(nx', ny')
-    return normals
-end
-
-function plot_levelset_normal_and_exact_normal(
+function plot_potential_components(
     ycoords,
-    levelsetnormal,
-    exactnormal;
+    component,
+    initialposition,
+    frequency,
+    amplitude,
+    interfacescale,
+    pdscale;
     filepath = "",
+    ylabel = "",
 )
-    fig, ax = PyPlot.subplots(2, 1, sharex = true)
-    ax[1].plot(ycoords, levelsetnormal[1, :], label = "levelset")
-    ax[1].plot(ycoords, exactnormal[1, :], "--", label = "exact")
-    ax[1].set_title("X-component of interface normal")
-    ax[1].grid()
-    ax[1].legend()
+    interfaceposition =
+        initialposition .+ perturbation.(ycoords, frequency, amplitude)
+    planeinterfacepd = mean(component)
 
-    ax[2].plot(ycoords, levelsetnormal[2, :])
-    ax[2].plot(ycoords, exactnormal[2, :], "--")
-    ax[2].set_title("Y-component of interface normal")
+    interfaceylim = interfacescale * amplitude
+    pdylim = pdscale
+
+    fig, ax = PyPlot.subplots(2, 1, sharex = true)
+    ax[1].plot(ycoords, interfaceposition, color = "black")
+    ax[1].set_ylim(
+        initialposition - interfaceylim,
+        initialposition + interfaceylim,
+    )
+    ax[1].grid()
+    ax[1].set_ylabel("Interface position")
+
+    ax[2].plot(ycoords, component, color = "black")
+    ax[2].set_ylim(planeinterfacepd - pdylim, planeinterfacepd + pdylim)
     ax[2].grid()
+    ax[2].set_ylabel(ylabel)
+    ax[2].set_xlabel("y")
+    fig.tight_layout()
 
     if length(filepath) > 0
         fig.savefig(filepath)
@@ -53,37 +59,33 @@ function plot_levelset_normal_and_exact_normal(
     end
 end
 
-function update_cell_interface_normals_tangents_areas!(
-    interfacequads,
-    cellid,
-    normals,
-    invjac,
+function plot_dilatation_and_normal_stress(
+    ycoords,
+    parentdilatation,
+    productdilatation,
+    parentsrr,
+    productsrr;
+    filepath = "",
 )
-    t = CutCellDG.rotate_90(normals)
-    s = CutCellDG.scale_area(t, invjac)
 
-    idx = interfacequads.celltoquad[cellid]
-    interfacequads.normals[idx] .= normals
-    interfacequads.tangents[idx] .= t
-    interfacequads.scaleareas[idx] .= s
-end
+    fig, ax = PyPlot.subplots(2, 1, sharex = true)
+    ax[1].plot(ycoords, 1.0 .+ parentdilatation, label = "parent")
+    ax[1].plot(ycoords, 1.0 .+ productdilatation, label = "product")
+    ax[1].grid()
+    ax[1].legend()
+    ax[1].set_ylabel(L"1 + \epsilon_{kk}")
 
-function update_interface_normals!(interfacequads, cutmesh, exactnormalfunc)
-    ncells = CutCellDG.number_of_cells(cutmesh)
-    cellsign = [CutCellDG.cell_sign(cutmesh, cellid) for cellid = 1:ncells]
-    cellids = findall(cellsign .== 0)
-    invjac = CutCellDG.inverse_jacobian(cutmesh)
+    ax[2].plot(ycoords, parentsrr, label = "parent")
+    ax[2].plot(ycoords, productsrr, label = "product")
+    ax[2].grid()
+    ax[2].set_ylabel(L"\sigma_{nn}")
+    ax[2].set_xlabel("y")
 
-    for cellid in cellids
-        cellmap = CutCellDG.cell_map(cutmesh, cellid)
-        qps = cellmap(CutCellDG.points(interfacequads[1, cellid]))
-        exactnormals = exactnormalfunc(qps[2, :])
-        update_cell_interface_normals_tangents_areas!(
-            interfacequads,
-            cellid,
-            exactnormals,
-            invjac,
-        )
+    if length(filepath) > 0
+        fig.savefig(filepath)
+        return fig
+    else
+        return fig
     end
 end
 
@@ -105,14 +107,13 @@ function plot_normal_stress(ycoords, parentsrr, productsrr; filepath = "")
     end
 end
 
-
 distancefunction(x) =
     perturbed_distancefunction(x, initialposition, frequency, amplitude)
 
 
 initialposition = 0.5
 frequency = 2.5
-amplitude = 1e-3
+amplitude = 1e-2
 # amplitude = 1e-10
 polyorder = 2
 nelmts = 17
@@ -147,20 +148,21 @@ ycoords = querypoints[2, :]
 
 
 
+
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
-elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 levelsetbasis = HermiteTensorProductBasis(2)
 quad = tensor_product_quadrature(2, 4)
+elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 dim, numpts = size(interpolation_points(levelsetbasis))
 basispts = interpolation_points(elasticitybasis)
 
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
+# CutCellDG.make_vertical_periodic!(dgmesh)
 
-# levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis)
-levelset = CutCellDG.LevelSet(x->distancefunction(x)[1], cgmesh, levelsetbasis)
+levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
 
 elementsize = CutCellDG.element_size(cgmesh)
 minelmtsize = minimum(elementsize)
@@ -176,24 +178,6 @@ spatialseedpoints =
 
 mesh, cellquads, facequads, interfacequads =
     TES.construct_merged_mesh_and_quadratures(cutmesh, levelset, numqp)
-update_interface_normals!(
-    interfacequads,
-    cutmesh,
-    x -> perturbed_normal(x, frequency, amplitude),
-)
-
-interfacenormals = CutCellDG.collect_interface_normals(interfacequads, cutmesh)
-refinterfaceqps, refcellids =
-    CutCellDG.collect_interface_quadrature_points(interfacequads, +1, cutmesh)
-interfaceqps = CutCellDG.map_to_spatial_on_merged_mesh(
-    refinterfaceqps,
-    refcellids,
-    +1,
-    mesh,
-)
-exactqpnormals = perturbed_normal(interfaceqps[2, :], frequency, amplitude)
-
-
 
 nodaldisplacement = TES.nodal_displacement(
     mesh,
@@ -220,7 +204,6 @@ normals = CutCellDG.collect_normals_at_spatial_points(
     closestcellids,
     levelset,
 )
-exactnormals = perturbed_normal(closestpoints[2, :], frequency, amplitude)
 
 parentclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
     closestpoints,
@@ -245,21 +228,20 @@ parentstrain = CutCellDG.parent_strain(
     mesh,
 )
 parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
+parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
 
 parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
 parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
+parentdilatation = CutCellDG.dilatation(parentstrain)
 
-parentradialtractionalt =
-    CutCellDG.traction_force_at_points(parentstress, exactnormals)
-parentsrralt =
-    CutCellDG.traction_component(parentradialtractionalt, exactnormals)
+parentcompwork = V02 * (1.0 .+ parentdilatation) .* parentsrr
 ################################################################################
-#
-#
-#
-#
-#
-# ################################################################################
+
+
+
+
+
+################################################################################
 productstrain = CutCellDG.product_elastic_strain(
     nodaldisplacement,
     elasticitybasis,
@@ -269,16 +251,124 @@ productstrain = CutCellDG.product_elastic_strain(
     mesh,
 )
 productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
-
+productstrainenergy =
+    V01 * CutCellDG.strain_energy(productstress, productstrain)
 productradialtraction =
     CutCellDG.traction_force_at_points(productstress, normals)
 productsrr = CutCellDG.traction_component(productradialtraction, normals)
+productdilatation = CutCellDG.dilatation(productstrain)
+productcompwork = V01 * (1.0 .+ productdilatation) .* productsrr
+################################################################################
 
-productradialtractionalt =
-    CutCellDG.traction_force_at_points(productstress, exactnormals)
-productsrralt =
-    CutCellDG.traction_component(productradialtractionalt, exactnormals)
-# ################################################################################
-foldername = "examples\\time-step\\perturbed-plane-interface\\analytical-normal-for-elasticity\\"
+srrmean = 0.5 * (parentsrr + productsrr)
+
+jse = productstrainenergy - parentstrainenergy
+jsediff = (maximum(jse) - minimum(jse)) / 2
+
+jcw = productcompwork - parentcompwork
+# jcw =
+#     (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
+#     srrmean
+jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
+
+pd = jse - jcw
+pddiff = (maximum(pd) - minimum(pd)) / 2
+
+foldername =
+    "examples\\time-step\\perturbed-plane-interface\\" *
+    "hermite-levelset\\potential-components\\direct-srr-results\\"
+interfacescale = 5
+################################################################################
+
+
+# pdscale = 1.5pddiff
+# plot_potential_components(
+#     ycoords,
+#     pd,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale,
+# )
 
 plot_normal_stress(ycoords,parentsrr,productsrr)
+
+# Error in [σnn]
+# srrerr = productsrr - parentsrr
+# srrerrdiff = (maximum(srrerr) - minimum(srrerr))/2
+# pdscale = 0.03
+# plot_potential_components(
+#     ycoords,
+#     srrerr,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale
+# )
+
+
+
+
+
+# pdscale = 8e-6
+# plot_potential_components(
+#     ycoords,
+#     jse,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale,
+#     ylabel = "Jump in strain energy",
+#     # filepath = foldername * "\\strain-energy-jump.png",
+# )
+
+# pdscale = 8e-6
+# plot_potential_components(
+#     ycoords,
+#     jcw,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     pdscale,
+#     ylabel = "Jump in compression work",
+#     # filepath = foldername * "\\compression-work-jump.png",
+# )
+#
+# plot_dilatation_and_normal_stress(
+#     ycoords,
+#     parentdilatation,
+#     productdilatation,
+#     parentsrr,
+#     productsrr,
+#     # filepath = foldername * "\\dilatation-and-normal-stress.png",
+# )
+
+# parentsrrdiff = (maximum(parentsrr) - minimum(parentsrr)) / 2
+# yscale = 0.3
+# plot_potential_components(
+#     ycoords,
+#     parentsrr,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     yscale,
+#     ylabel = L"\mathrm{Parent} \ \sigma_{nn}",
+# )
+
+# productsrrdiff = (maximum(productsrr) - minimum(productsrr)) / 2
+# yscale = 0.3
+# plot_potential_components(
+#     ycoords,
+#     productsrr,
+#     initialposition,
+#     frequency,
+#     amplitude,
+#     interfacescale,
+#     yscale,
+#     ylabel = L"\mathrm{Product} \ \sigma_{nn}",
+# )
