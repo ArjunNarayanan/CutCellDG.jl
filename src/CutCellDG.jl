@@ -12,6 +12,7 @@ include("utilities.jl")
 include("cell_map.jl")
 include("cg_mesh.jl")
 include("dg_mesh.jl")
+include("periodic_bc.jl")
 include("levelset.jl")
 include("cut_mesh.jl")
 

@@ -103,8 +103,28 @@ function background_mesh(mesh::DGMesh)
     return mesh.mesh
 end
 
+function bottom_cellids(mesh::DGMesh)
+    ne = elements_per_mesh_side(mesh)
+    ncells = number_of_cells(mesh)
+    return 1:ne[2]:ncells
+end
 
+function top_cellids(mesh::DGMesh)
+    ne = elements_per_mesh_side(mesh)
+    ncells = number_of_cells(mesh)
+    return ne[2]:ne[2]:ncells
+end
 
+function left_cellids(mesh::DGMesh)
+    ne = elements_per_mesh_side(mesh)
+    return 1:ne[2]
+end
+
+function right_cellids(mesh::DGMesh)
+    ne = elements_per_mesh_side(mesh)
+    ncells = number_of_cells(mesh)
+    return (ncells-ne[2]+1):ncells
+end
 
 ##########################################################################################
 
@@ -127,6 +147,10 @@ end
 
 function cell_connectivity(mesh::DGMesh, faceid, cellid)
     return mesh.cellconnectivity[faceid, cellid]
+end
+
+function update_cell_connectivity!(mesh::DGMesh,faceid,cellid,nbrcellid)
+    mesh.cellconnectivity[faceid,cellid] = nbrcellid
 end
 
 function dg_nodal_coordinates(cellmaps, refcoords)

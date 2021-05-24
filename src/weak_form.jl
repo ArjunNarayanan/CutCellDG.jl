@@ -59,7 +59,14 @@ function mass_matrix(basis, quad, ndofs, scale)
     return matrix
 end
 
-function mass_matrix(basis, quad1, quad2, ndofs, facescale)
+function mass_matrix(
+    basis,
+    quad1,
+    quad2,
+    ndofs,
+    facescale;
+    weight_tolerance = 1e-3,
+)
     numqp = length(quad1)
     @assert length(quad2) == length(facescale) == numqp
     nf = number_of_basis_functions(basis)
@@ -68,7 +75,7 @@ function mass_matrix(basis, quad1, quad2, ndofs, facescale)
     for qpidx = 1:numqp
         p1, w1 = quad1[qpidx]
         p2, w2 = quad2[qpidx]
-        @assert w1 ≈ w2
+        @assert isapprox(w1, w2, atol = weight_tolerance)
 
         vals1 = basis(p1)
         vals2 = basis(p2)
@@ -87,7 +94,8 @@ function component_mass_matrix(
     quad2,
     components,
     ndofs,
-    facescale,
+    facescale;
+    weight_tolerance = 1e-3,
 )
     numqp = length(quad1)
     @assert length(quad2) == length(facescale) == numqp
@@ -98,7 +106,7 @@ function component_mass_matrix(
     for qpidx = 1:numqp
         p1, w1 = quad1[qpidx]
         p2, w2 = quad2[qpidx]
-        @assert w1 ≈ w2
+        @assert isapprox(w1, w2, atol = weight_tolerance)
 
         component = components[:, qpidx]
         projector = component * component'
@@ -124,7 +132,8 @@ function surface_traction_component_operator(
     dim,
     scalearea,
     jac,
-    vectosymmconverter,
+    vectosymmconverter;
+    weight_tolerance = 1e-3,
 )
     numqp = length(quad1)
     @assert length(quad2) ==
@@ -141,7 +150,7 @@ function surface_traction_component_operator(
     for qpidx = 1:numqp
         p1, w1 = quad1[qpidx]
         p2, w2 = quad2[qpidx]
-        @assert w1 ≈ w2
+        @assert isapprox(w1, w2, atol = weight_tolerance)
 
         vals = basis(p1)
         grad = transform_gradient(gradient(basis, p2), jac)
@@ -170,7 +179,8 @@ function surface_traction_operator(
     dim,
     scalearea,
     jac,
-    vectosymmconverter,
+    vectosymmconverter;
+    weight_tolerance = 1e-3,
 )
 
     numqp = length(quad1)
@@ -184,7 +194,7 @@ function surface_traction_operator(
     for qpidx = 1:numqp
         p1, w1 = quad1[qpidx]
         p2, w2 = quad2[qpidx]
-        @assert w1 ≈ w2
+        @assert isapprox(w1, w2, atol = weight_tolerance)
 
         vals = basis(p1)
         grad = transform_gradient(gradient(basis, p2), jac)

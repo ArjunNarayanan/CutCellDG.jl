@@ -79,6 +79,11 @@ end
     include("standard_convergence/test_stress_convergence.jl")
 end
 
+@safetestset "Test Periodic BC" begin
+    include("periodic_bc/test_modify_cell_connectivity.jl")
+    include("periodic_bc/test_vertical_periodic_bc_convergence.jl")
+end
+
 @safetestset "Test Coherent Interface Transformation Strain Displacement Convergence" begin
     include(
         "transformation_strain_convergence/test_transformation_strain_displacement_convergence.jl",
