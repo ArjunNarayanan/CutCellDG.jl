@@ -6,16 +6,17 @@ using Revise
 using CutCellDG
 include("../../../../test/useful_routines.jl")
 include("../transformation-elasticity-solver.jl")
+# include("analytical-solver.jl")
 TES = TransformationElasticitySolver
-
+# APS = AnalyticalPlaneSolver
 
 function perturbation(x, frequency, amplitude)
-    return amplitude * cos.(2 * pi * frequency * x)
+    return amplitude * sin.(2 * pi * frequency * x)
 end
 
 perturbed_distancefunction(x, initialposition, frequency, amplitude) =
     plane_distance_function(x, [1.0, 0.0], [initialposition, 0.0]) +
-    perturbation(x[2], frequency, amplitude)
+    perturbation(x[2, :], frequency, amplitude)
 
 function plot_potential_components(
     ycoords,
@@ -89,14 +90,35 @@ function plot_dilatation_and_normal_stress(
     end
 end
 
+function plot_normal_stress(ycoords, parentsrr, productsrr; filepath = "")
+
+    fig, ax = PyPlot.subplots()
+    ax.plot(ycoords, parentsrr, label = "parent")
+    ax.plot(ycoords, productsrr, label = "product")
+    ax.grid()
+    ax.set_ylabel(L"\sigma_{nn}")
+    ax.set_xlabel("y")
+    ax.legend()
+
+    if length(filepath) > 0
+        fig.savefig(filepath)
+        return fig
+    else
+        return fig
+    end
+end
+
+
 distancefunction(x) =
     perturbed_distancefunction(x, initialposition, frequency, amplitude)
 
+
 initialposition = 0.5
-frequency = 2.0
+frequency = 2.5
 amplitude = 1e-2
 # amplitude = 1e-10
-polyorder = 2
+elasticityorder = 2
+levelsetorder = 2
 nelmts = 17
 penaltyfactor = 1e3
 meshwidth = [1.0, 1.0]
@@ -127,20 +149,19 @@ querypoints = vcat(
 )
 ycoords = querypoints[2, :]
 
+
+
+
 transfstress =
     CutCellDG.plane_strain_transformation_stress(lambda1, mu1, theta0)
 
-levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2, 4)
-elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
+levelsetbasis = LagrangeTensorProductBasis(2,levelsetorder)
+solverbasis = LagrangeTensorProductBasis(2, elasticityorder)
+basispts = interpolation_points(solverbasis)
 dim, numpts = size(interpolation_points(levelsetbasis))
-basispts = interpolation_points(elasticitybasis)
-
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
-# CutCellDG.make_vertical_periodic!(dgmesh)
-
-levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
+levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis)
 
 elementsize = CutCellDG.element_size(cgmesh)
 minelmtsize = minimum(elementsize)
@@ -159,7 +180,7 @@ mesh, cellquads, facequads, interfacequads =
 
 nodaldisplacement = TES.nodal_displacement(
     mesh,
-    elasticitybasis,
+    solverbasis,
     cellquads,
     facequads,
     interfacequads,
@@ -200,7 +221,7 @@ productclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
 ################################################################################
 parentstrain = CutCellDG.parent_strain(
     nodaldisplacement,
-    elasticitybasis,
+    solverbasis,
     parentclosestrefpoints,
     closestcellids,
     mesh,
@@ -222,7 +243,7 @@ parentcompwork = V02 * (1.0 .+ parentdilatation) .* parentsrr
 ################################################################################
 productstrain = CutCellDG.product_elastic_strain(
     nodaldisplacement,
-    elasticitybasis,
+    solverbasis,
     theta0,
     productclosestrefpoints,
     closestcellids,
@@ -238,54 +259,42 @@ productdilatation = CutCellDG.dilatation(productstrain)
 productcompwork = V01 * (1.0 .+ productdilatation) .* productsrr
 ################################################################################
 
-srrmean = 0.5 * (parentsrr + productsrr)
+srrmean = 0.5*(parentsrr + productsrr)
 
+# NOTES: COMPUTE STRAIN ENERGY JUMP AND COMP WORK JUMP
 jse = productstrainenergy - parentstrainenergy
 jsediff = (maximum(jse) - minimum(jse)) / 2
 
-# jcw = productcompwork - parentcompwork
-jcw =
-    (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
-    srrmean
+jcw = productcompwork - parentcompwork
+# jcw =
+#     (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
+#     srrmean
 jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
 
 pd = jse - jcw
 pddiff = (maximum(pd) - minimum(pd)) / 2
 
-foldername = "examples\\time-step\\perturbed-plane-interface\\hermite-levelset\\potential-components"
-interfacescale = 5
+foldername = "examples\\time-step\\perturbed-plane-interface\\lagrange-levelset\\potential-components\\"
+
+
 ################################################################################
 
-
-pdscale = 1.5pddiff
-plot_potential_components(
-    ycoords,
-    pd,
-    initialposition,
-    frequency,
-    amplitude,
-    interfacescale,
-    pdscale,
-)
+filename = foldername*"lagrange-levelset-"*string(levelsetorder)*"-normal-stress.png"
+plot_normal_stress(ycoords,parentsrr,productsrr,filepath=filename)
 
 
 
-# Error in [σnn]
-# srrerr = productsrr - parentsrr
-# srrerrdiff = (maximum(srrerr) - minimum(srrerr))/2
-# pdscale = 0.03
+# interfacescale = 5
+# pdscale = 3e-6
 # plot_potential_components(
 #     ycoords,
-#     srrerr,
+#     pd,
 #     initialposition,
 #     frequency,
 #     amplitude,
 #     interfacescale,
-#     pdscale
+#     pdscale,
 # )
-
-
-
 
 
 # pdscale = 8e-6
@@ -313,16 +322,16 @@ plot_potential_components(
 #     ylabel = "Jump in compression work",
 #     # filepath = foldername * "\\compression-work-jump.png",
 # )
-#
+
 # plot_dilatation_and_normal_stress(
 #     ycoords,
 #     parentdilatation,
 #     productdilatation,
 #     parentsrr,
 #     productsrr,
-#     # filepath = foldername * "\\dilatation-and-normal-stress.png",
+#     filepath = foldername * "\\dilatation-and-normal-stress.png",
 # )
-
+#
 # parentsrrdiff = (maximum(parentsrr) - minimum(parentsrr)) / 2
 # yscale = 0.3
 # plot_potential_components(
@@ -335,7 +344,9 @@ plot_potential_components(
 #     yscale,
 #     ylabel = L"\mathrm{Parent} \ \sigma_{nn}",
 # )
-
+#
+#
+#
 # productsrrdiff = (maximum(productsrr) - minimum(productsrr)) / 2
 # yscale = 0.3
 # plot_potential_components(

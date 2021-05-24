@@ -83,27 +83,27 @@ function nodal_displacement(
 
     ############################################################################
     # LEFT BOUNDARY CONDITIONS
-    CutCellDG.assemble_penalty_displacement_component_bc!(
-        sysmatrix,
-        sysrhs,
-        x -> 0.0,
-        basis,
-        facequads,
-        stiffness,
-        mesh,
-        x -> x[1] ≈ x0[1],
-        [1.0, 0.0],
-        penalty,
-    )
-    CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
-        sysrhs,
-        transfstress,
-        basis,
-        facequads,
-        mesh,
-        x -> x[1] ≈ x0[1],
-        [1.0, 0.0],
-    )
+    # CutCellDG.assemble_penalty_displacement_component_bc!(
+    #     sysmatrix,
+    #     sysrhs,
+    #     x -> 0.0,
+    #     basis,
+    #     facequads,
+    #     stiffness,
+    #     mesh,
+    #     x -> x[1] ≈ x0[1],
+    #     [1.0, 0.0],
+    #     penalty,
+    # )
+    # CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
+    #     sysrhs,
+    #     transfstress,
+    #     basis,
+    #     facequads,
+    #     mesh,
+    #     x -> x[1] ≈ x0[1],
+    #     [1.0, 0.0],
+    # )
 
     ############################################################################
     # BOTTOM BOUNDARY CONDITIONS
@@ -133,27 +133,27 @@ function nodal_displacement(
     ############################################################################
     # RIGHT BOUNDARY CONDITIONS
 
-    CutCellDG.assemble_penalty_displacement_component_bc!(
-        sysmatrix,
-        sysrhs,
-        x -> 0.0,
-        basis,
-        facequads,
-        stiffness,
-        mesh,
-        x -> x[1] ≈ x0[1]+meshwidths[1],
-        [1.0, 0.0],
-        penalty,
-    )
-    CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
-        sysrhs,
-        transfstress,
-        basis,
-        facequads,
-        mesh,
-        x -> x[1] ≈ x0[1]+meshwidths[1],
-        [1.0, 0.0],
-    )
+    # CutCellDG.assemble_penalty_displacement_component_bc!(
+    #     sysmatrix,
+    #     sysrhs,
+    #     x -> 0.0,
+    #     basis,
+    #     facequads,
+    #     stiffness,
+    #     mesh,
+    #     x -> x[1] ≈ x0[1]+meshwidths[1],
+    #     [1.0, 0.0],
+    #     penalty,
+    # )
+    # CutCellDG.assemble_penalty_displacement_component_transformation_linear_form!(
+    #     sysrhs,
+    #     transfstress,
+    #     basis,
+    #     facequads,
+    #     mesh,
+    #     x -> x[1] ≈ x0[1]+meshwidths[1],
+    #     [1.0, 0.0],
+    # )
 
     ############################################################################
     # TOP BOUNDARY CONDITIONS

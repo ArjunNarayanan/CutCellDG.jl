@@ -274,13 +274,13 @@ jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
 pd = jse - jcw
 pddiff = (maximum(pd) - minimum(pd)) / 2
 
-foldername = "examples\\time-step\\perturbed-plane-interface\\lagrange-levelset\\potential-components"
+foldername = "examples\\time-step\\perturbed-plane-interface\\hermite-levelset\\potential-components\\"
 
 
 ################################################################################
 
-
-plot_normal_stress(ycoords, parentsrr, productsrr)
+filename = foldername*"hermite-normal-stress.png"
+plot_normal_stress(ycoords, parentsrr, productsrr,filepath=filename)
 
 
 
