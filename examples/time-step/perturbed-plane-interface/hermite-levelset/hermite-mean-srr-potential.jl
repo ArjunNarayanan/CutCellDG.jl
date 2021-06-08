@@ -45,7 +45,7 @@ function plot_potential_components(
     ax[1].set_ylabel("Interface position")
 
     ax[2].plot(ycoords, component, color = "black")
-    ax[2].set_ylim(planeinterfacepd - pdylim, planeinterfacepd + pdylim)
+    # ax[2].set_ylim(planeinterfacepd - pdylim, planeinterfacepd + pdylim)
     ax[2].grid()
     ax[2].set_ylabel(ylabel)
     ax[2].set_xlabel("y")
@@ -94,11 +94,11 @@ distancefunction(x) =
 
 initialposition = 0.5
 frequency = 1.0
-amplitude = 3e-1
+amplitude = 2.4e-1
 # amplitude = 1e-10
 polyorder = 3
 nelmts = 33
-penaltyfactor = 1e4
+penaltyfactor = 1e3
 meshwidth = [1.0, 1.0]
 numqp = required_quadrature_order(polyorder) + 2
 
@@ -138,7 +138,7 @@ basispts = interpolation_points(elasticitybasis)
 
 cgmesh = CutCellDG.CGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], numpts)
 dgmesh = CutCellDG.DGMesh([0.0, 0.0], meshwidth, [nelmts, nelmts], basispts)
-# CutCellDG.make_vertical_periodic!(dgmesh)
+CutCellDG.make_vertical_periodic!(dgmesh)
 
 levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
 
@@ -266,6 +266,7 @@ filename =
     "-nelmts-" *
     string(nelmts) *
     ".png"
+filename = foldername*"amplitude-"*string(amplitude)*".png"
 plot_potential_components(
     ycoords,
     pd,
@@ -274,7 +275,7 @@ plot_potential_components(
     amplitude,
     interfacescale,
     pdscale,
-    # filepath = filename,
+    filepath = filename,
 )
 
 
