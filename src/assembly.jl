@@ -53,17 +53,24 @@ function assemble!(systemrhs, rows, vals)
     append!(systemrhs.vals, vals)
 end
 
-function node_to_dof_id(nodeid, dof, dofspernode)
-    return (nodeid - 1) * dofspernode + dof
+function node_to_dof_id(nodeid, dofs, dofspernode)
+    return (nodeid - 1) * dofspernode + dofs
+end
+
+function element_dofs(nodeids,dofs,dofspernode)
+    numnodes = length(nodeids)
+    numdofs = length(dofs)
+
+    extnodeids = repeat(nodeids,inner=numdofs)
+    extdofs = repeat(dofs,outer=numnodes)
+
+    edofs = [node_to_dof_id(n,d,dofspernode) for (n,d) in zip(extnodeids,extdofs)]
+    return edofs
 end
 
 function element_dofs(nodeids, dofspernode)
-    numnodes = length(nodeids)
-    extnodeids = repeat(nodeids, inner = dofspernode)
-    dofs = repeat(1:dofspernode, numnodes)
-    edofs =
-        [node_to_dof_id(n, d, dofspernode) for (n, d) in zip(extnodeids, dofs)]
-    return edofs
+    dofs = 1:dofspernode
+    return element_dofs(nodeids,dofs,dofspernode)
 end
 
 function element_dofs_to_operator_dofs(rowdofs, coldofs)
