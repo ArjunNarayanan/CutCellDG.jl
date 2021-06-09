@@ -57,20 +57,23 @@ function node_to_dof_id(nodeid, dofs, dofspernode)
     return (nodeid - 1) * dofspernode + dofs
 end
 
-function element_dofs(nodeids,dofs,dofspernode)
+function element_dofs(nodeids, dofs, dofspernode)
     numnodes = length(nodeids)
     numdofs = length(dofs)
 
-    extnodeids = repeat(nodeids,inner=numdofs)
-    extdofs = repeat(dofs,outer=numnodes)
+    extnodeids = repeat(nodeids, inner = numdofs)
+    extdofs = repeat(dofs, outer = numnodes)
 
-    edofs = [node_to_dof_id(n,d,dofspernode) for (n,d) in zip(extnodeids,extdofs)]
+    edofs = [
+        node_to_dof_id(n, d, dofspernode) for
+        (n, d) in zip(extnodeids, extdofs)
+    ]
     return edofs
 end
 
 function element_dofs(nodeids, dofspernode)
     dofs = 1:dofspernode
-    return element_dofs(nodeids,dofs,dofspernode)
+    return element_dofs(nodeids, dofs, dofspernode)
 end
 
 function element_dofs_to_operator_dofs(rowdofs, coldofs)
@@ -79,6 +82,23 @@ function element_dofs_to_operator_dofs(rowdofs, coldofs)
     rows = repeat(rowdofs, outer = nc)
     cols = repeat(coldofs, inner = nr)
     return rows, cols
+end
+
+function assemble_couple_cell_matrix!(
+    sysmatrix,
+    nodeids1,
+    dofs1,
+    nodeids2,
+    dofs2,
+    dofspernode,
+    vals,
+)
+
+    edofs1 = element_dofs(nodeids1, dofs1, dofspernode)
+    edofs2 = element_dofs(nodeids2, dofs2, dofspernode)
+
+    rows, cols = element_dofs_to_operator_dofs(edofs1, edofs2)
+    assemble!(sysmatrix, rows, cols, vals)
 end
 
 function assemble_couple_cell_matrix!(
@@ -99,10 +119,16 @@ function assemble_cell_matrix!(sysmatrix, nodeids, dofspernode, vals)
     assemble_couple_cell_matrix!(sysmatrix, nodeids, nodeids, dofspernode, vals)
 end
 
-function assemble_cell_rhs!(sysrhs, nodeids, dofspernode, vals)
-    rows = element_dofs(nodeids, dofspernode)
+function assemble_cell_rhs!(sysrhs, nodeids, dofs, dofspernode, vals)
+    rows = element_dofs(nodeids, dofs, dofspernode)
     assemble!(sysrhs, rows, vals)
 end
+
+function assemble_cell_rhs!(sysrhs, nodeids, dofspernode, vals)
+    dofs = 1:dofspernode
+    assemble_cell_rhs!(sysrhs,nodeids,dofs,dofspernode,vals)
+end
+
 
 function sparse_operator(sysmatrix, ndofs)
     return dropzeros!(
