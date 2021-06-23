@@ -92,7 +92,7 @@ end
 
 function plot_normal_stress(ycoords, parentsrr, productsrr; filepath = "")
 
-    fig, ax = PyPlot.subplots()
+    fig, ax = PyPlot.subplots(figsize = (9, 3))
     ax.plot(ycoords, parentsrr, label = "parent")
     ax.plot(ycoords, productsrr, label = "product")
     ax.grid()
@@ -110,7 +110,7 @@ end
 
 function plot_normal_stress(ycoords, srr; filepath = "")
 
-    fig, ax = PyPlot.subplots()
+    fig, ax = PyPlot.subplots(figsize = (9, 3))
     ax.plot(ycoords, srr)
     ax.grid()
     ax.set_ylabel(L"\sigma_{nn}")
@@ -135,24 +135,17 @@ frequency = 2.0
 amplitude = 1e-2
 # amplitude = 1e-10
 polyorder = 3
-nelmts = 33
+nelmts = 5
 penaltyfactor = 1e3
 meshwidth = [1.0, 1.0]
 numqp = required_quadrature_order(polyorder) + 2
 
-K1, K2 = 247.0, 247.0    # GPa
-mu1, mu2 = 126.0, 126.0   # GPa
+K1, K2 = 247.0, 192.0    # GPa
+mu1, mu2 = 126.0, 87.0   # GPa
 
 lambda1 = lame_lambda(K1, mu1)
 lambda2 = lame_lambda(K2, mu2)
 stiffness = CutCellDG.HookeStiffness(lambda1, mu1, lambda2, mu2)
-rho1 = 3.93e3           # Kg/m^3
-rho2 = 3.68e3           # Kg/m^3
-V01 = 1.0 / rho1
-V02 = 1.0 / rho2
-ΔG0Jmol = -14351.0
-molarmass = 0.147
-ΔG0 = ΔG0Jmol / molarmass
 theta0 = -0.067
 
 
@@ -246,13 +239,9 @@ parentstrain = CutCellDG.parent_strain(
     mesh,
 )
 parentstress = CutCellDG.parent_stress(parentstrain, stiffness)
-parentstrainenergy = V02 * CutCellDG.strain_energy(parentstress, parentstrain)
 
 parentradialtraction = CutCellDG.traction_force_at_points(parentstress, normals)
 parentsrr = CutCellDG.traction_component(parentradialtraction, normals)
-parentdilatation = CutCellDG.dilatation(parentstrain)
-
-parentcompwork = V02 * (1.0 .+ parentdilatation) .* parentsrr
 ################################################################################
 
 
@@ -269,116 +258,28 @@ productstrain = CutCellDG.product_elastic_strain(
     mesh,
 )
 productstress = CutCellDG.product_stress(productstrain, stiffness, theta0)
-productstrainenergy =
-    V01 * CutCellDG.strain_energy(productstress, productstrain)
+
 productradialtraction =
     CutCellDG.traction_force_at_points(productstress, normals)
 productsrr = CutCellDG.traction_component(productradialtraction, normals)
-productdilatation = CutCellDG.dilatation(productstrain)
-productcompwork = V01 * (1.0 .+ productdilatation) .* productsrr
 ################################################################################
-
 srrmean = 0.5 * (parentsrr + productsrr)
-
-# NOTES: COMPUTE STRAIN ENERGY JUMP AND COMP WORK JUMP
-jse = productstrainenergy - parentstrainenergy
-jsediff = (maximum(jse) - minimum(jse)) / 2
-
-# jcw = productcompwork - parentcompwork
-jcw =
-    (V01 * (1.0 .+ productdilatation) - V02 * (1.0 .+ parentdilatation)) .*
-    srrmean
-jcwdiff = (maximum(jcw) - minimum(jcw)) / 2
-
-pd = jse - jcw
-pddiff = (maximum(pd) - minimum(pd)) / 2
-
 foldername = "examples\\time-step\\perturbed-plane-interface\\hermite-levelset\\potential-components\\"
-
-interfacescale = 5
-
 ################################################################################
 
-filename = foldername*"hermite-mean-normal-stress.png"
-# plot_normal_stress(ycoords,srrmean)
-
-
-# plot_normal_stress(ycoords,parentsrr,productsrr)
-# plot_normal_stress(ycoords,srrmean)
-
-pdscale = 1.5pddiff
-plot_potential_components(
-    ycoords,
-    pd,
-    initialposition,
-    frequency,
-    amplitude,
-    interfacescale,
-    pdscale,
-)
-#
-#
-# pdscale = 1.5jsediff
-# plot_potential_components(
-#     ycoords,
-#     jse,
-#     initialposition,
-#     frequency,
-#     amplitude,
-#     interfacescale,
-#     pdscale,
-#     ylabel = "Jump in strain energy",
-#     # filepath = foldername * "\\strain-energy-jump.png",
-# )
-#
-#
-#
-# pdscale = 1.5jcwdiff
-# plot_potential_components(
-#     ycoords,
-#     jcw,
-#     initialposition,
-#     frequency,
-#     amplitude,
-#     interfacescale,
-#     pdscale,
-#     ylabel = "Jump in compression work",
-#     # filepath = foldername * "\\compression-work-jump.png",
-# )
-
-# plot_dilatation_and_normal_stress(
-#     ycoords,
-#     parentdilatation,
-#     productdilatation,
-#     parentsrr,
-#     productsrr,
-#     filepath = foldername * "\\dilatation-and-normal-stress.png",
-# )
-#
-# parentsrrdiff = (maximum(parentsrr) - minimum(parentsrr)) / 2
-# yscale = 0.3
-# plot_potential_components(
-#     ycoords,
-#     parentsrr,
-#     initialposition,
-#     frequency,
-#     amplitude,
-#     interfacescale,
-#     yscale,
-#     ylabel = L"\mathrm{Parent} \ \sigma_{nn}",
-# )
-#
-#
-#
-# productsrrdiff = (maximum(productsrr) - minimum(productsrr)) / 2
-# yscale = 0.3
-# plot_potential_components(
-#     ycoords,
-#     productsrr,
-#     initialposition,
-#     frequency,
-#     amplitude,
-#     interfacescale,
-#     yscale,
-#     ylabel = L"\mathrm{Product} \ \sigma_{nn}",
-# )
+filename =
+    foldername *
+    "polyorder-" *
+    string(polyorder) *
+    "-nelmts-" *
+    string(nelmts) *
+    "-normal-stress.png"
+plot_normal_stress(ycoords, parentsrr, productsrr, filepath = filename)
+filename =
+    foldername *
+    "polyorder-" *
+    string(polyorder) *
+    "-nelmts-" *
+    string(nelmts) *
+    "mean-normal-stress.png"
+plot_normal_stress(ycoords, srrmean, filepath = filename)
