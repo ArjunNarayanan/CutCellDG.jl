@@ -12,8 +12,15 @@ function LevelSet(distancefunc, mesh, basis::LagrangeTensorProductBasis)
     LevelSet(interpolater, coeffs, mesh, dofspernode)
 end
 
-function LevelSet(distancefunc, mesh, basis::HermiteTensorProductBasis, quad)
+function LevelSet(
+    distancefunc,
+    mesh,
+    basis::HermiteTensorProductBasis;
+    numqp = 4,
+)
     dim = dimension(mesh)
+    quad = tensor_product_quadrature(dim, numqp)
+
     dofspernode = hermite_dofs_per_node(dim)
     interpolater = InterpolatingPolynomial(1, basis)
     coeffs = variational_levelset_coefficients(

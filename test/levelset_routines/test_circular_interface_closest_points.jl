@@ -64,14 +64,13 @@ err = norm(testcp - closestpoints, Inf)
 
 ################################################################################
 levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2,4)
+
 dim,nf = size(interpolation_points(levelsetbasis))
 mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], nelmts, nf)
 levelset = CutCellDG.LevelSet(
     x -> circle_distance_function(x, center, radius)[1],
     mesh,
     levelsetbasis,
-    quad
 )
 cutmesh = CutCellDG.CutMesh(mesh, levelset)
 

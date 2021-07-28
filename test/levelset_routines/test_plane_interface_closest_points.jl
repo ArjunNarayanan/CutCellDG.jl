@@ -131,7 +131,7 @@ testcellids = [4, 6, 4, 5, 5, 4]
 ################################################################################
 L, W = 1.0, 1.0
 levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2, 4)
+
 dim, nf = size(interpolation_points(levelsetbasis))
 
 mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [1, 1], nf)
@@ -139,7 +139,6 @@ levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, [1.0, 0.0], [0.75, 0.0]),
     mesh,
     levelsetbasis,
-    quad,
 )
 CutCellDG.load_coefficients!(levelset, 1)
 cellmap = CutCellDG.cell_map(mesh, 1)
@@ -225,7 +224,6 @@ levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, normal, xI),
     mesh,
     levelsetbasis,
-    quad,
 )
 cutmesh = CutCellDG.CutMesh(mesh, levelset)
 

@@ -73,7 +73,6 @@ productclosestrefpoints = CutCellDG.map_to_reference_on_merged_mesh(
 
 ################################################################################
 levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2,4)
 solverbasis = LagrangeTensorProductBasis(2, polyorder)
 refpoints = interpolation_points(solverbasis)
 dim, nf = size(interpolation_points(levelsetbasis))
@@ -83,7 +82,7 @@ dgmesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [2, 1], refpoints)
 normal = [1.0, 0.0]
 x0 = [2.0 + delta, 0.0]
 distancefunction(x) = plane_distance_function(x, normal, x0)
-levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis, quad)
+levelset = CutCellDG.LevelSet(distancefunction, cgmesh, levelsetbasis)
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)
 

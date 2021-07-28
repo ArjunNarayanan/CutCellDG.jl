@@ -58,7 +58,7 @@ refseedpoints,refseedcellids = CutCellDG.seed_zero_levelset(2,levelset,[1,2],1e-
 
 L, W = 1.0, 1.0
 levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2,4)
+
 dim,nf = size(interpolation_points(levelsetbasis))
 
 mesh = CutCellDG.CGMesh([0.0, 0.0], [L, W], [1, 1], nf)
@@ -66,7 +66,6 @@ levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, [1.0, 0.0], [0.75, 0.0]),
     mesh,
     levelsetbasis,
-    quad
 )
 
 refseedpoints, refseedcellids =

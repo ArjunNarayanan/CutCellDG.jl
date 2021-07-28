@@ -47,7 +47,7 @@ numqp = 2
 
 elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
 levelsetbasis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2,4)
+
 x0 = [0.0, 0.0]
 meshwidths = [2.0, 1.0]
 nelements = [2, 1]
@@ -63,7 +63,6 @@ levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, normal, xI),
     cgmesh,
     levelsetbasis,
-    quad
 )
 
 cutmesh = CutCellDG.CutMesh(dgmesh, levelset)

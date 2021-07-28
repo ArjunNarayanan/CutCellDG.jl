@@ -29,7 +29,7 @@ function test_transformation_strain_simple_tension()
 
     elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
     levelsetbasis = HermiteTensorProductBasis(2)
-    quad = tensor_product_quadrature(2, 4)
+
     dim, nf = size(interpolation_points(levelsetbasis))
     refpoints = interpolation_points(elasticitybasis)
 
@@ -37,7 +37,7 @@ function test_transformation_strain_simple_tension()
     mesh = CutCellDG.DGMesh([0.0, 0.0], [L, W], [nelmts, nelmts], refpoints)
 
     levelset =
-        CutCellDG.LevelSet(x -> 1.0, cgmesh, levelsetbasis, quad)
+        CutCellDG.LevelSet(x -> 1.0, cgmesh, levelsetbasis)
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
     cellquads = CutCellDG.CellQuadratures(cutmesh, levelset, numqp)

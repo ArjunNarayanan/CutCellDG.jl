@@ -46,7 +46,6 @@ cellsign = CutCellDG.cell_sign!(levelset, tol, perturbation)
 
 
 basis = HermiteTensorProductBasis(2)
-quad = tensor_product_quadrature(2, 4)
 normal = [1.0, 0.0]
 x0 = [1.0, 0.0]
 tol = 1e-3
@@ -55,7 +54,6 @@ levelset = CutCellDG.LevelSet(
     x -> plane_distance_function(x, normal, x0),
     mesh,
     basis,
-    quad,
 )
 cellsign = CutCellDG.cell_sign!(levelset,tol,perturbation)
 testcellsign = [0,1,1]

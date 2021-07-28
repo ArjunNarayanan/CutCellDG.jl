@@ -34,7 +34,7 @@ x0 = [0.75,0.0]
 normal = [1.0,0.0]
 distancefunc(x) = plane_distance_function(x,normal,x0)
 
-levelset = CutCellDG.LevelSet(distancefunc,mesh,basis,quad)
+levelset = CutCellDG.LevelSet(distancefunc,mesh,basis)
 
 coeffs1 = CutCellDG.coefficients(levelset,1)
 testcoeffs = [-0.75  -0.75  -0.25  -0.25
@@ -52,7 +52,7 @@ function testcubic(v)
     return 8x^3*y^3 + 4x^2*y^3 + 17*x*y + 11
 end
 
-levelset = CutCellDG.LevelSet(testcubic,mesh,basis,quad)
+levelset = CutCellDG.LevelSet(testcubic,mesh,basis)
 testcellid = 4
 CutCellDG.load_coefficients!(levelset,testcellid)
 cellmap = CutCellDG.cell_map(mesh,testcellid)

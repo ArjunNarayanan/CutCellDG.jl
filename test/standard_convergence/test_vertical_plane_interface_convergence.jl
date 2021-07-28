@@ -42,7 +42,7 @@ function error_for_plane_interface(
 
     elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
     levelsetbasis = HermiteTensorProductBasis(2)
-    quad = tensor_product_quadrature(2, 4)
+    
     dim, nf = size(interpolation_points(levelsetbasis))
     refpoints = interpolation_points(elasticitybasis)
 
@@ -54,7 +54,6 @@ function error_for_plane_interface(
         x -> plane_distance_function(x, normal, x0),
         cgmesh,
         levelsetbasis,
-        quad,
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)

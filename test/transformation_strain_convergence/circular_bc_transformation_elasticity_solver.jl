@@ -271,7 +271,7 @@ function construct_mesh_and_quadratures(
     numqp,
 )
     levelsetbasis = HermiteTensorProductBasis(2)
-    quad = tensor_product_quadrature(2, 4)
+
     dim, nf = size(interpolation_points(levelsetbasis))
     refpoints = interpolation_points(elasticitybasis)
 
@@ -282,7 +282,6 @@ function construct_mesh_and_quadratures(
         x -> -circle_distance_function(x, interfacecenter, interfaceradius)[1],
         cgmesh,
         levelsetbasis,
-        quad
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)

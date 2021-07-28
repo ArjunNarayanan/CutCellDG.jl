@@ -28,7 +28,7 @@ function test_cut_simple_tension()
 
     elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
     levelsetbasis = HermiteTensorProductBasis(2)
-    quad = tensor_product_quadrature(2,4)
+    # quad = tensor_product_quadrature(2,4)
     dim,nf = size(interpolation_points(levelsetbasis))
     refpoints = interpolation_points(elasticitybasis)
 
@@ -39,7 +39,6 @@ function test_cut_simple_tension()
         x -> plane_distance_function(x, interfacenormal, interfacepoint),
         cgmesh,
         levelsetbasis,
-        quad
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)

@@ -221,7 +221,7 @@ function displacement_error(
 
     elasticitybasis = LagrangeTensorProductBasis(2, polyorder)
     levelsetbasis = HermiteTensorProductBasis(2)
-    quad = tensor_product_quadrature(2, 4)
+
     dim, nf = size(interpolation_points(levelsetbasis))
     refpoints = interpolation_points(elasticitybasis)
 
@@ -237,7 +237,6 @@ function displacement_error(
         x -> -circle_distance_function(x, center, inradius)[1],
         cgmesh,
         levelsetbasis,
-        quad
     )
 
     cutmesh = CutCellDG.CutMesh(mesh, levelset)
@@ -486,8 +485,8 @@ function test_mixed_bc_transformation_strain_corner_interface()
     u1rate = convergence_rate(dx, u1err)
     u2rate = convergence_rate(dx, u2err)
 
-    @test all(u1rate .> 3.8)
-    @test all(u2rate .> 3.8)
+    @test all(u1rate .> 3.7)
+    @test all(u2rate .> 3.7)
 end
 
 test_mixed_bc_transformation_strain_circular_interface()
