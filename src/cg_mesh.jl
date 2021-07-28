@@ -12,7 +12,7 @@ struct CGMesh
     nelements::Any
     nfmside::Any
     mesh::Any
-    elementsize
+    elementsize::Any
 end
 
 function CGMesh(mesh, nodesperelement)
@@ -22,10 +22,9 @@ function CGMesh(mesh, nodesperelement)
     meshwidths = mesh_widths(mesh)
     nelements = elements_per_mesh_side(mesh)
     elementsize = meshwidths ./ nelements
-    nfeside = nodes_per_element_side(nodesperelement)
+    nfeside = nodes_per_element_side(nodesperelement, dim)
     nfmside = nodes_per_mesh_side(nelements, nfeside)
     numnodes = prod(nfmside)
-    elementsize = meshwidths ./ nelements
 
     nodalcoordinates =
         cg_nodal_coordinates(x0, mesh_widths(mesh), nelements, nfmside)
@@ -47,7 +46,7 @@ function CGMesh(mesh, nodesperelement)
         nelements,
         nfmside,
         mesh,
-        elementsize
+        elementsize,
     )
 end
 
@@ -106,6 +105,10 @@ function nodes_per_element(mesh::CGMesh)
     return mesh.nodesperelement
 end
 
+function nodal_connectivity(mesh::CGMesh)
+    return mesh.nodalconnectivity
+end
+
 function nodal_connectivity(mesh::CGMesh, cellid::Int)
     return mesh.nodalconnectivity[:, cellid]
 end
@@ -135,8 +138,8 @@ function inverse_jacobian(mesh::CGMesh)
 end
 ################################################################################
 
-function nodes_per_element_side(nodesperelement)
-    nfeside = sqrt(nodesperelement)
+function nodes_per_element_side(nodesperelement, dim)
+    nfeside = (nodesperelement)^(1.0 / dim)
     @assert isinteger(nfeside)
     return round(Int, nfeside)
 end
@@ -146,17 +149,25 @@ function nodes_per_mesh_side(nelements, nfeside)
 end
 
 function cg_nodal_coordinates(x0, widths, nelements, nfmside)
-    @assert length(x0) == length(widths) == length(nelements) == 2
+    dim = length(x0)
+    @assert length(x0) == length(widths) == length(nelements) == dim
 
-    xrange = range(x0[1], stop = x0[1] + widths[1], length = nfmside[1])
-    yrange = range(x0[2], stop = x0[2] + widths[2], length = nfmside[2])
+    if dim == 1
+        xrange = range(x0[1], stop = x0[1] + widths[1], length = nfmside[1])
+        return Array(transpose(xrange))
+    elseif dim == 2
+        xrange = range(x0[1], stop = x0[1] + widths[1], length = nfmside[1])
+        yrange = range(x0[2], stop = x0[2] + widths[2], length = nfmside[2])
 
-    ycoords = repeat(yrange, outer = nfmside[1])
-    xcoords = repeat(xrange, inner = nfmside[2])
-    return vcat(xcoords', ycoords')
+        ycoords = repeat(yrange, outer = nfmside[1])
+        xcoords = repeat(xrange, inner = nfmside[2])
+        return vcat(xcoords', ycoords')
+    else
+        error("3D currently not supported")
+    end
 end
 
-function cg_nodal_connectivity(nfmside, nfeside, nodesperelement, nelements)
+function cg_nodal_connectivity_2d(nfmside, nfeside, nodesperelement, nelements)
     numnodes = prod(nfmside)
     ncells = prod(nelements)
 
@@ -180,4 +191,34 @@ function cg_nodal_connectivity(nfmside, nfeside, nodesperelement, nelements)
         colend += nfeside - 1
     end
     return connectivity
+end
+
+function cg_nodal_connectivity_1d(nfmside, nodesperelement, nelements)
+    numnodes = prod(nfmside)
+    ncells = prod(nelements)
+
+    connectivity = zeros(Int, nodesperelement, ncells)
+    nodeids = 1:numnodes
+    start = 1
+    stop = nodesperelement
+
+    for cellid = 1:ncells
+        connectivity[:, cellid] = nodeids[start:stop]
+        start = stop
+        stop = start + nodesperelement - 1
+    end
+    return connectivity
+end
+
+function cg_nodal_connectivity(nfmside, nfeside, nodesperelement, nelements)
+    dim = length(nfmside)
+    @assert length(nfmside) == length(nelements)
+
+    if dim == 1
+        return cg_nodal_connectivity_1d(nfmside,nodesperelement,nelements)
+    elseif dim == 2
+        return cg_nodal_connectivity_2d(nfmside,nfeside,nodesperelement,nelements)
+    else
+        error("3D not supported")
+    end
 end

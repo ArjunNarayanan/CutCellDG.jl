@@ -5,10 +5,12 @@ using SafeTestsets
 end
 
 @safetestset "Test CG Mesh" begin
+    include("maps_and_mesh/test_1d_cg_mesh.jl")
     include("maps_and_mesh/test_cg_mesh.jl")
 end
 
 @safetestset "Test DG Mesh" begin
+    include("maps_and_mesh/test_1d_dg_mesh.jl")
     include("maps_and_mesh/test_dg_mesh.jl")
 end
 

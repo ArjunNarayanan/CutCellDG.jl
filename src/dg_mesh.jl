@@ -136,6 +136,10 @@ function nodal_coordinates(mesh::DGMesh)
     return mesh.nodalcoordinates
 end
 
+function nodal_connectivity(mesh::DGMesh)
+    return mesh.nodalconnectivity
+end
+
 function nodal_connectivity(mesh::DGMesh, cellid::Int)
     return mesh.nodalconnectivity[:, cellid]
 end
